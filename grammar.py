@@ -11,44 +11,52 @@ from pyparsing import (
     nums,
     srange,
     Forward,
-    Keyword,
+    Keyword, Suppress,
 )
 
+from conversion.qname import from_parse_results
+from conversion.primaries import str_to_int, str_to_float, str_to_dec
+
+xpath_version = "3.1"
 
 example_test_lines = [
     "not(a)",
     "empty(b)",
     "test()",
     "word",
-    "$varArc_BalanceSheet_PrtFST1SumOfChildrenDParentDebit3_Assets = - sum($varArc_BalanceSheet_PrtFST1SumOfChildrenDParentDebit3_ChildrenOfAssetsCredit)+ sum($varArc_BalanceSheet_PrtFST1SumOfChildrenDParentDebit3_ChildrenOfAssetsDebit)",
 ]
 
 
-# Define XPath 2.0 tokens
+# The following literals are not defined as such in the spec, but we'll define and reuse these to aid readability
+# Writing these literals as '(' would be even more readable, but formatting tools such as Black like to change the
+# single quotes by double quotes which may change their meaning for pyparsing
+l_par_l = Literal("(")
+l_par_r = Literal(")")
+l_dot = Literal(".")
 
 """
 Primary Expressions
 https://www.w3.org/TR/xpath20/#id-primary-expressions
 """
 
-
 # https://www.w3.org/TR/xpath20/#doc-xpath-IntegerLiteral
 t_IntegerLiteral = Word(nums)
+t_IntegerLiteral.addParseAction(str_to_int)
 t_IntegerLiteral.setName("IntegerLiteral")
 
-# https://www.w3.org/TR/xpath20/#doc-xpath-DecimalLiteral
-#  	DecimalLiteral 	   ::=    	("." Digits) | (Digits "." [0-9]*)
-t_DecimalLiteral = ("." + t_IntegerLiteral) | (
-    t_IntegerLiteral + "." + Optional(t_IntegerLiteral)
+t_DecimalLiteral = Combine(l_dot + t_IntegerLiteral) | Combine(
+    t_IntegerLiteral + l_dot + Optional(t_IntegerLiteral)
 )
+t_DecimalLiteral.addParseAction(str_to_float)
 t_DecimalLiteral.setName("DecimalLiteral")
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-DoubleLiteral
-t_DoubleLiteral = (Literal(".") + t_IntegerLiteral) | (
-    t_IntegerLiteral + Optional(Literal(".") + Optional(t_IntegerLiteral))
+t_DoubleLiteral = Combine(l_dot + t_IntegerLiteral) | Combine(
+    t_IntegerLiteral + Optional(l_dot + Optional(t_IntegerLiteral))
 ) + (Literal("e") | Literal("E")) + Optional(
     Literal("+") | Literal("-")
 ) + t_IntegerLiteral
+t_DoubleLiteral.addParseAction(str_to_float)
 t_DoubleLiteral.setName("DoubleLiteral")
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-NumericLiteral
@@ -66,7 +74,7 @@ t_EscapeQuot.setName("EscapedQuot")
 t_EscapeApos = Literal("''")
 t_EscapeApos.setName("EscapedApos")
 # https://www.w3.org/TR/xpath20/#doc-xpath-StringLiteral
-t_StringLiteral = Combine((Literal('"') + ZeroOrMore(t_EscapeQuot | Regex('[^"]')) + Literal('"')) | (Literal("'") + ZeroOrMore(t_EscapeApos | Regex("[^']")) + Literal("'")))
+t_StringLiteral = Combine((Suppress('"') + ZeroOrMore(t_EscapeQuot | Regex('[^"]')) + Suppress('"')) | Combine(Suppress("'") + ZeroOrMore(t_EscapeApos | Regex("[^']")) + Suppress("'")))
 t_StringLiteral.setName("StringLiteral")
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-Literal
@@ -109,13 +117,18 @@ t_Prefix = t_NCName
 t_Prefix.setName("Prefix")
 t_LocalPart = t_NCName
 t_LocalPart.setName("LocalPart")
-t_PrefixedName = t_Prefix + ":" + t_LocalPart
+t_PrefixedName = t_Prefix + Suppress(Literal(":")) + t_LocalPart
+# t_PrefixedName.addParseAction(from_parse_results)
 t_PrefixedName.setName("PrefixedName")
+
 t_UnprefixedName = t_LocalPart
+# t_UnprefixedName.addParseAction(from_unprefixed_string)
 t_UnprefixedName.setName("UnprefixedName")
 
 t_QName = t_PrefixedName | t_UnprefixedName
 t_QName.setName("Qname")
+t_QName.setParseAction(from_parse_results)
+
 t_BracedURILiteral = Literal("Q") + Literal("{") + ZeroOrMore(Regex("[^{}]")) + Literal("}")
 t_BracedURILiteral.setName("BracedURILiteral")
 
@@ -186,32 +199,32 @@ t_QuantifiedExpr.setName("QuantifiedExpr")
 t_Expr = t_ExprSingle + ZeroOrMore(Literal(","), t_ExprSingle)
 t_Expr.setName("Expr")
 # https://www.w3.org/TR/xpath20/#doc-xpath-ParenthesizedExpr
-t_ParenthesizedExpr = "(" + Optional(t_Expr) + ")"
+t_ParenthesizedExpr = l_par_l + Optional(t_Expr) + l_par_r
 t_ParenthesizedExpr.setName("ParenthesizedExpr")
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-ContextItemExpr
-t_ContextItemExpr = Literal(".")
+t_ContextItemExpr = l_dot
 t_ContextItemExpr.setName("ContextItemExpr")
 
 # XPath 2.0 seems to be less verbose
 # https://www.w3.org/TR/xpath-3/#prod-xpath31-FunctionCall
 # t_FunctionCall = (
-#     t_QName + Literal("(") + Optional(t_ExprSingle + ZeroOrMore(Literal(",") + t_ExprSingle)) + Literal(")")
+#     t_QName + l_par_l + Optional(t_ExprSingle + ZeroOrMore(Literal(",") + t_ExprSingle)) + l_par_r)
 # )
 t_ArgumentPlaceholder = Literal("?")
 t_ArgumentPlaceholder.setName("ArgumentPlaceholder")
 t_Argument = t_ExprSingle | t_ArgumentPlaceholder
 t_Argument.setName("Argument")
-t_ArgumentList = Literal("(") + Optional(t_Argument + ZeroOrMore(Literal(",") + t_Argument)) + Literal(")")
+t_ArgumentList = l_par_l + t_Argument + Optional(ZeroOrMore(Literal(",") + t_Argument)) + l_par_r
 t_ArgumentList.setName("ArgumentList")
 t_FunctionCall = t_EQName + t_ArgumentList
 t_FunctionCall.setName("FunctionCall")
 
 t_IfExpr = (
     Literal("if")
-    + Literal("(")
+    + l_par_l
     + t_Expr
-    + Literal(")")
+    + l_par_r
     + Literal("then")
     + t_ExprSingle
     + Literal("else")
@@ -227,27 +240,16 @@ t_Predicate.setName("Predicate")
 
 t_PredicateList = ZeroOrMore(t_Predicate)
 t_PredicateList.setName("PredicateList")
-t_FilterExpr = t_PrimaryExpr + t_PredicateList
-t_FilterExpr.setName("FilterExpr")
 
-t_ForwardAxis = (
-    Word("child" + "::")
-    | Word("descendant" + "::")
-    | Word("attribute" + "::")
-    | Word("self" + "::")
-    | Word("descendant-or-self" + "::")
-    | Word("following-sibling" + "::")
-    | Word("following" + "::")
-    | Word("namespace" + "::")
-)
+
+l_Forward_keywords = Literal("child") | Literal("self") | Literal("descendant-or-self") | Literal("following-sibling") | \
+                     Literal("following") | Literal("attribute") | Literal("namespace") | Literal("descendant")
+t_ForwardAxis = l_Forward_keywords + Literal("::")
 t_ForwardAxis.setName("ForwardAxis")
-t_ReverseAxis = (
-    Word("parent" + "::")
-    | Word("ancestor" + "::")
-    | Word("preceding-sibling" + "::")
-    | Word("preceding" + "::")
-    | Word("ancestor-or-self" + "::")
-)
+
+l_Reverse_keywords =  Literal("preceding-sibling") | Literal("preceding") | Literal("ancestor-or-self") \
+                      | Literal("parent") | Literal("ancestor")
+t_ReverseAxis = l_Reverse_keywords + Literal("::")
 t_ReverseAxis.setName("ReverseAxis")
 
 t_ElementNameOrWildcard = t_ElementName | Literal("*")
@@ -259,39 +261,45 @@ https://www.w3.org/TR/xpath20/#prod-xpath-KindTest
 """
 
 t_ElementTest = (
-    Word("element")
-    + "("
+    Keyword("element")
+    + l_par_l
     + Optional(t_ElementNameOrWildcard + Optional("," + t_TypeName + Optional("?")))
-    + Literal(")")
+    + l_par_r
 )
+t_ElementTest.setName("ElementTest")
 
 t_ElementDeclaration = t_ElementName
-t_SchemaElementTest = Word("schema-element") + "(" + t_ElementDeclaration + ")"
+t_SchemaElementTest = Word("schema-element") + l_par_l + t_ElementDeclaration + l_par_r
 
 
 t_DocumentTest = (
     Word("document-node")
-    + Literal("(")
+    + l_par_l
     + Optional(t_ElementTest | t_SchemaElementTest)
-    + Literal(")")
+    + l_par_r
 )
+t_DocumentTest.setName("DocumentTest")
 
 t_AttribNameOrWildcard = t_AttributeName | "*"
+t_AttribNameOrWildcard.setName("AttribNameOrWildcard")
 t_AttributeTest = (
     Word("attribute")
-    + "("
+    + l_par_l
     + Optional(t_AttribNameOrWildcard + Optional("," + t_TypeName))
-    + ")"
+    + l_par_r
 )
+t_AttributeTest.setName("AttributeTest")
 
 t_AttributeDeclaration = t_AttributeName
-t_SchemaAttributeTest = Word("schema-attribute") + "(" + t_AttributeDeclaration + ")"
+t_AttributeDeclaration.setName("AttributeDeclaration")
+t_SchemaAttributeTest = Word("schema-attribute") + l_par_l + t_AttributeDeclaration + l_par_r
+t_SchemaAttributeTest.setName("SchemaAttributeTest")
 
-t_CommentTest = Word("comment") + "(" + ")"
-t_TextTest = Word("text") + "(" + ")"
-t_AnyKindTest = Word("node") + "(" + ")"
+t_CommentTest = Word("comment") + l_par_l + l_par_r
+t_TextTest = Word("text") + l_par_l + l_par_r
+t_AnyKindTest = Word("node") + l_par_l + l_par_r
 t_PITest = (
-    Word("processing-instruction") + "(" + Optional(t_NCName | t_StringLiteral) + ")"
+    Word("processing-instruction") + l_par_l + Optional(t_NCName | t_StringLiteral) + l_par_r
 )
 t_KindTest = (
     t_DocumentTest
@@ -304,57 +312,106 @@ t_KindTest = (
     | t_TextTest
     | t_AnyKindTest
 )
+t_KindTest.setName("KindTest")
 
 t_NameTest = t_QName | t_Wildcard
+t_NameTest.setName("NameTest")
 
 t_NodeTest = t_KindTest | t_NameTest
+t_NodeTest.setName("NodeTest")
 
 t_AbbrevForwardStep = Optional("@") + t_NodeTest
+t_AbbrevForwardStep.setName("AbbrevForwardStep")
+
 t_AbbrevReverseStep = Word("..")
+t_AbbrevReverseStep.setName("AbbrevReverseStep")
 
 t_ForwardStep = (t_ForwardAxis + t_NodeTest) | t_AbbrevForwardStep
+t_ForwardStep.setName("ForwardStep")
+
 t_ReverseStep = (t_ReverseAxis + t_NodeTest) | t_AbbrevReverseStep
+t_ReverseStep.setName("ReverseStep")
+
 t_AxisStep = (t_ReverseStep | t_ForwardStep) + t_PredicateList
-t_StepExpr = MatchFirst(t_FilterExpr, t_AxisStep)
-t_RelativePathExpr = t_StepExpr + (Literal("/") | Literal("//") + t_StepExpr)
+t_AxisStep.setName("AxisStep")
+
+if xpath_version == "2.0":
+    t_FilterExpr = t_PrimaryExpr + t_PredicateList
+    t_FilterExpr.setName("FilterExpr")
+
+    t_StepExpr = MatchFirst(t_FilterExpr, t_AxisStep)
+
+elif xpath_version == "3.1":
+    t_KeySpecifier = t_NCName | t_IntegerLiteral | t_ParenthesizedExpr | Literal("*")
+    t_lookup = Literal("?") + t_KeySpecifier
+    t_PostfixExpr = t_PrimaryExpr + ZeroOrMore(t_Predicate | t_ArgumentList | t_lookup)
+    t_StepExpr = t_PostfixExpr | t_AxisStep
+
+
+t_RelativePathExpr = t_StepExpr + ZeroOrMore((Literal("/") | Literal("//")) + t_StepExpr)
 t_PathExpr = (
-    "/"
-    + Optional(t_RelativePathExpr)
-    + MatchFirst("//" + t_RelativePathExpr, t_RelativePathExpr)
+                 (Literal("/") + Optional(t_RelativePathExpr))
+                 | (Literal("//") + t_RelativePathExpr)
+                 | t_RelativePathExpr
 )
+t_SimpleMapExpr = t_PathExpr + ZeroOrMore(Literal("!") + t_PathExpr)
 
-t_ValueExpr = t_PathExpr
+if xpath_version == "2.0":
+    t_ValueExpr = t_PathExpr
+elif xpath_version == "3.1":
+    t_ValueExpr = t_SimpleMapExpr
+
+t_UnaryExpr = ZeroOrMore(Literal("-") | Literal("+")) + t_ValueExpr
+t_UnaryExpr.setName("UnaryExpr")
+
+if xpath_version == "2.0":
+    t_CastExpr = t_UnaryExpr + Optional("cast" + "as" + t_SingleType)
+elif xpath_version == "3.1":
+
+    t_ArrowFunctionSpecifier = t_EQName | t_VarRef | t_ParenthesizedExpr
+    t_ArrowExpr = t_UnaryExpr + ZeroOrMore(Literal("=>") + t_ArrowFunctionSpecifier)
+    t_CastExpr = t_ArrowExpr + Optional("cast" + "as" + t_SingleType)
 
 
-t_UnaryExpr = ZeroOrMore("-", "+") + t_ValueExpr
-
-t_CastExpr = t_UnaryExpr + Optional("cast" + "as" + t_SingleType)
 
 t_CastableExpr = t_CastExpr + Optional("castable" + "as" + t_SingleType)
 
-t_ItemType = t_KindTest | Word("item" + "(" + ")") | t_AtomicType
+t_ItemType = t_KindTest | Combine("item" + l_par_l + l_par_r) | t_AtomicType
 
 t_OccurrenceIndicator = Literal("?") | Literal("*") | Literal("+")
 
 t_SequenceType = MatchFirst(
-    ("empty-sequence" + "(" ")"), (t_ItemType + Optional(t_OccurrenceIndicator))
+    ("empty-sequence" + l_par_l + l_par_r), (t_ItemType + Optional(t_OccurrenceIndicator))
 )
 
 t_TreatExpr = t_CastableExpr + Optional("treat" + "as" + t_SequenceType)
 t_InstanceofExpr = t_TreatExpr + MatchFirst("instance" + "of" + t_SequenceType)
+
 t_IntersectExceptExpr = t_InstanceofExpr + ZeroOrMore(
     MatchFirst("intersect", "except") + t_InstanceofExpr
 )
+t_IntersectExceptExpr.setName("IntersectExceptExpr")
+
 t_UnionExpr = t_IntersectExceptExpr + ZeroOrMore(
     MatchFirst(Word("union") | Literal("|")) + t_IntersectExceptExpr
 )
+t_UnionExpr.setName("UnionExpr")
+
 t_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(
-    MatchFirst(Literal("*") | Word("div") | Word("idiv") | Word("mod")) + t_UnionExpr
+    MatchFirst(Keyword("*") | Literal("div") | Literal("idiv") | Literal("mod")) + t_UnionExpr
 )
+t_MultiplicativeExpr.setName("MultiplicativeExpr")
+
 t_AdditiveExpr = t_MultiplicativeExpr + ZeroOrMore(
-    MatchFirst(Literal("+") | Literal("-")) + t_MultiplicativeExpr
+    MatchFirst(Keyword("+") | Literal("-")) + t_MultiplicativeExpr
 )
-t_RangeExpr = t_AdditiveExpr + Optional("to" + t_AdditiveExpr)
+t_AdditiveExpr.setName("Additive_Expr")
+
+t_RangeExpr = t_AdditiveExpr + Optional(Keyword("to") + t_AdditiveExpr)
+t_RangeExpr.setName("RangeExpr")
+
+t_StringConcatExpr = t_RangeExpr + ZeroOrMore(Word("||") + t_AdditiveExpr)
+t_StringConcatExpr.setName("StringConcatExpr")
 
 t_ValueComp = (
     Word("eq") | Word("ne") | Word("lt") | Word("le") | Word("gt") | Word("ge")
@@ -363,13 +420,12 @@ t_GeneralComp = (
     Literal("=") | Word("!=") | Literal("<") | Word("<=") | Literal(">") | Word(">=")
 )
 t_NodeComp = Word("is") | Word("<<") | Word(">>")
-t_ComparisonExpr = t_RangeExpr + Optional(
-    MatchFirst(t_ValueComp | t_GeneralComp | t_NodeComp) + t_RangeExpr
-)
+t_ComparisonExpr = t_StringConcatExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_StringConcatExpr)
 
-t_AndExpr = t_ComparisonExpr + ZeroOrMore("and" + t_ComparisonExpr)
 
-t_OrExpr = t_AndExpr + ZeroOrMore("or" + t_AndExpr)
+t_AndExpr = t_ComparisonExpr + ZeroOrMore(Keyword("and") + t_ComparisonExpr)
+
+t_OrExpr = t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr)
 
 # Set ExprSingle with actual expressions
 t_ExprSingle <<= t_ForExpr | t_QuantifiedExpr | t_IfExpr | t_OrExpr | t_PrimaryExpr
