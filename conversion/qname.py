@@ -24,8 +24,6 @@ class QName:
             return f"{self.prefix}:{self.localname}"
         return self.localname
 
-
-
     def __eq__(self, other):
         if not isinstance(other, QName):
             return NotImplemented

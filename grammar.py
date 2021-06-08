@@ -16,6 +16,8 @@ from pyparsing import (
 
 from conversion.qname import from_parse_results
 from conversion.primaries import str_to_int, str_to_float, str_to_dec
+from conversion.tests import documentTest, elementTest, schemaElementTest, schemaAttributeTest, commentTest, textTest, \
+    anyKindTest, processingInstructionTest
 
 xpath_version = "3.1"
 
@@ -30,8 +32,8 @@ example_test_lines = [
 # The following literals are not defined as such in the spec, but we'll define and reuse these to aid readability
 # Writing these literals as '(' would be even more readable, but formatting tools such as Black like to change the
 # single quotes by double quotes which may change their meaning for pyparsing
-l_par_l = Literal("(")
-l_par_r = Literal(")")
+l_par_l = Suppress(Literal("("))
+l_par_r = Suppress(Literal(")"))
 l_dot = Literal(".")
 
 """
@@ -267,10 +269,13 @@ t_ElementTest = (
     + l_par_r
 )
 t_ElementTest.setName("ElementTest")
+t_ElementTest.setParseAction(elementTest)
 
 t_ElementDeclaration = t_ElementName
-t_SchemaElementTest = Word("schema-element") + l_par_l + t_ElementDeclaration + l_par_r
 
+t_SchemaElementTest = Word("schema-element") + l_par_l + t_ElementDeclaration + l_par_r
+t_SchemaElementTest.setParseAction(schemaElementTest)
+t_SchemaElementTest.setName("schema-element")
 
 t_DocumentTest = (
     Word("document-node")
@@ -279,6 +284,7 @@ t_DocumentTest = (
     + l_par_r
 )
 t_DocumentTest.setName("DocumentTest")
+t_DocumentTest.setParseAction(documentTest)
 
 t_AttribNameOrWildcard = t_AttributeName | "*"
 t_AttribNameOrWildcard.setName("AttribNameOrWildcard")
@@ -292,18 +298,31 @@ t_AttributeTest.setName("AttributeTest")
 
 t_AttributeDeclaration = t_AttributeName
 t_AttributeDeclaration.setName("AttributeDeclaration")
+
 t_SchemaAttributeTest = Word("schema-attribute") + l_par_l + t_AttributeDeclaration + l_par_r
+t_SchemaAttributeTest.setParseAction(schemaAttributeTest)
 t_SchemaAttributeTest.setName("SchemaAttributeTest")
 
 t_CommentTest = Word("comment") + l_par_l + l_par_r
+t_CommentTest.setParseAction(commentTest)
+t_CommentTest.setName("comment")
+
 t_TextTest = Word("text") + l_par_l + l_par_r
+t_TextTest.setParseAction(textTest)
+t_TextTest.setName("TextTest")
+
 t_AnyKindTest = Word("node") + l_par_l + l_par_r
+t_AnyKindTest.setParseAction(anyKindTest)
+t_AnyKindTest.setName("AnyKindTest")
+
 t_PITest = (
     Word("processing-instruction") + l_par_l + Optional(t_NCName | t_StringLiteral) + l_par_r
 )
+t_PITest.setParseAction(processingInstructionTest)
+t_PITest.setName("Processing-InstructionTest")
+
 t_KindTest = (
-    t_DocumentTest
-    | t_ElementTest
+    t_ElementTest
     | t_AttributeTest
     | t_SchemaElementTest
     | t_SchemaAttributeTest
@@ -311,6 +330,7 @@ t_KindTest = (
     | t_CommentTest
     | t_TextTest
     | t_AnyKindTest
+    | t_DocumentTest
 )
 t_KindTest.setName("KindTest")
 
@@ -354,13 +374,14 @@ t_PathExpr = (
                  | (Literal("//") + t_RelativePathExpr)
                  | t_RelativePathExpr
 )
-t_SimpleMapExpr = t_PathExpr + ZeroOrMore(Literal("!") + t_PathExpr)
 
 if xpath_version == "2.0":
     t_ValueExpr = t_PathExpr
 elif xpath_version == "3.1":
+    t_SimpleMapExpr = t_PathExpr + ZeroOrMore(Literal("!") + t_PathExpr)
     t_ValueExpr = t_SimpleMapExpr
 
+# ex: "+ 1", "- localname", "+ ()"
 t_UnaryExpr = ZeroOrMore(Literal("-") | Literal("+")) + t_ValueExpr
 t_UnaryExpr.setName("UnaryExpr")
 
@@ -410,27 +431,38 @@ t_AdditiveExpr.setName("Additive_Expr")
 t_RangeExpr = t_AdditiveExpr + Optional(Keyword("to") + t_AdditiveExpr)
 t_RangeExpr.setName("RangeExpr")
 
-t_StringConcatExpr = t_RangeExpr + ZeroOrMore(Word("||") + t_AdditiveExpr)
-t_StringConcatExpr.setName("StringConcatExpr")
+
 
 t_ValueComp = (
     Word("eq") | Word("ne") | Word("lt") | Word("le") | Word("gt") | Word("ge")
 )
+t_ValueComp.setName("ValueComp")
+
 t_GeneralComp = (
     Literal("=") | Word("!=") | Literal("<") | Word("<=") | Literal(">") | Word(">=")
 )
+t_GeneralComp.setName("GeneralComp")
 t_NodeComp = Word("is") | Word("<<") | Word(">>")
-t_ComparisonExpr = t_StringConcatExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_StringConcatExpr)
+t_NodeComp.setName("NodeCOmp")
 
+if xpath_version == "2.0":
+    t_ComparisonExpr = t_RangeExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_RangeExpr)
+    t_ComparisonExpr.setName("ComparisonExpr")
+elif xpath_version == "3.1":
+    t_StringConcatExpr = t_RangeExpr + ZeroOrMore(Word("||") + t_AdditiveExpr)
+    t_StringConcatExpr.setName("StringConcatExpr")
+    t_ComparisonExpr = t_StringConcatExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_StringConcatExpr)
+    t_ComparisonExpr.setName("ComparisonExpr")
 
 t_AndExpr = t_ComparisonExpr + ZeroOrMore(Keyword("and") + t_ComparisonExpr)
+t_AndExpr.setName("AndExpr")
 
 t_OrExpr = t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr)
+t_OrExpr.setName("OrExpr")
 
 # Set ExprSingle with actual expressions
 t_ExprSingle <<= t_ForExpr | t_QuantifiedExpr | t_IfExpr | t_OrExpr | t_PrimaryExpr
 # t_ExprSingle <<= t_ForExpr | t_QuantifiedExpr | t_IfExpr | t_OrExpr
-
 
 t_XPath = t_Expr
 t_XPath.setName("XPath")

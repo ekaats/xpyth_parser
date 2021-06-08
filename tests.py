@@ -1,6 +1,7 @@
 import unittest
 import grammar as gr
 from conversion.qname import QName
+from conversion.tests import Test
 
 from pyparsing import ParseException
 
@@ -31,7 +32,6 @@ class XPath_parser_tests(unittest.TestCase):
         """
         self.assertEqual(list(gr.t_StringLiteral.parseString("'test'", parseAll=True)), ["test"])
         self.assertEqual(list(gr.t_StringLiteral.parseString('"String"', parseAll=True)), ["String"])
-        # self.assertEqual(list(gr.t_StringLiteral.parseString("Test String", parseAll=True)), ['Test', 'String'])
 
         # Todo: Add some exotic char checks
         # Char tests
@@ -71,33 +71,46 @@ class XPath_parser_tests(unittest.TestCase):
 
     def test_kind_tests(self):
         # Empty document-node
-        self.assertEqual(list(gr.t_KindTest.parseString(f"document-node()", parseAll=True)),[f"document-node", "(", ")"])
+        self.assertEqual(list(gr.t_KindTest.parseString(f"document-node()", parseAll=True)),[Test(test_type="document-node")])
 
         # Empty element test
-        self.assertEqual(list(gr.t_KindTest.parseString(f"element()", parseAll=True)), [f"element", "(", ")"])
+        self.assertEqual(list(gr.t_KindTest.parseString(f"element()", parseAll=True)), [Test(test_type="element")])
 
         # document-node with element test
         self.assertEqual(list(gr.t_KindTest.parseString(f"document-node(element())", parseAll=True)),
-                         [f"document-node", "(","element", "(", ")", ")"])
+                         [Test(test_type="document-node", test=Test(test_type="element"))])
+
+        # document-node with element test and a Qname
+        self.assertEqual(list(gr.t_KindTest.parseString(f"document-node(element(test:element))", parseAll=True)),
+                         [Test(test_type="document-node",
+                               test=Test(test_type="element", test=QName(prefix="test", localname="element")))])
+
+        # document-node with schema element test and a Qname
+        self.assertEqual(list(gr.t_KindTest.parseString(f"document-node(schema-element(element))", parseAll=True)),
+                         [Test(test_type="document-node",
+                               test=Test(test_type="schema-element", test=QName(localname="element")))])
 
         # Empty attribute test
-        self.assertEqual(list(gr.t_KindTest.parseString(f"attribute()", parseAll=True)), [f"attribute", "(", ")"])
+        self.assertEqual(list(gr.t_KindTest.parseString(f"attribute()", parseAll=True)), [f"attribute"])
 
         # Schema-element test
         self.assertEqual(list(gr.t_KindTest.parseString(f"schema-element(px:name)", parseAll=True)),
-                         [f"schema-element", "(", QName(prefix="px", localname='name'), ")"])
+                         [Test(test_type="schema-element", test=QName(prefix="px", localname='name'))])
 
         # Schema-element test
         self.assertEqual(list(gr.t_KindTest.parseString(f"schema-attribute(px:name)", parseAll=True)),
-                         [f"schema-attribute", "(", QName(prefix="px", localname='name'), ")"])
+                         [Test(test_type="schema-attribute", test=QName(prefix="px", localname='name'))])
 
         # empty processing-instruction test
         self.assertEqual(list(gr.t_KindTest.parseString(f"processing-instruction()", parseAll=True)),
-                         [f"processing-instruction", "(", ")"])
+                         [Test(test_type="processing-instruction")])
+
+        self.assertEqual(list(gr.t_KindTest.parseString(f"processing-instruction(name)", parseAll=True)),
+                         [Test(test_type="processing-instruction", test='name')])
 
         # empty comment, test and node test
         for keyword in ["comment", "text", "node"]:
-            self.assertEqual(list(gr.t_KindTest.parseString(f"{keyword}()", parseAll=True)),[f"{keyword}", "(", ")"])
+            self.assertEqual(list(gr.t_KindTest.parseString(f"{keyword}()", parseAll=True)), [Test(test_type=f"{keyword}")])
 
     def test_predicates(self):
         self.assertEqual(list(gr.t_PredicateList.parseString("", parseAll=True)), [])
@@ -116,9 +129,9 @@ class XPath_parser_tests(unittest.TestCase):
 
         # With an element test
         self.assertEqual(list(gr.t_ForwardStep.parseString(f"following-sibling::element(*)", parseAll=True)),
-                         [f"following-sibling", "::", "element", "(", "*", ")"])
+                         [f"following-sibling", "::", "element", "*"])
         self.assertEqual(list(gr.t_ReverseStep.parseString(f"ancestor-or-self::element(*)", parseAll=True)),
-                         [f"ancestor-or-self", "::", "element", "(", "*", ")"])
+                         [f"ancestor-or-self", "::", "element", "*"])
 
         self.assertEqual(list(gr.t_ForwardStep.parseString(f"descendant::prefix:localname", parseAll=True)),
                          [f"descendant", "::", QName(prefix="prefix", localname='localname')])
@@ -126,11 +139,14 @@ class XPath_parser_tests(unittest.TestCase):
         self.assertEqual(list(gr.t_ReverseStep.parseString(f"preceding-sibling::prefix:localname", parseAll=True)),
                          [f"preceding-sibling", "::", QName(prefix="prefix", localname='localname')])
 
+    def test_operators(self):
+
+        self.assertEqual(list(gr.t_UnaryExpr.parseString(f"+ 1", parseAll=True)), ["+", 1])
+        self.assertEqual(list(gr.t_UnaryExpr.parseString(f"- localname", parseAll=True)), ["-", QName(localname="localname")])
+        self.assertEqual(list(gr.t_UnaryExpr.parseString(f"+ ()", parseAll=True)), ["+"])
+
+
     def test_expressions(self):
-        #todo: figure out for loops
-        # and exprSingle. The documentation of that part is a bit strange.
-
-
 
         # testthingy = gr.t_SimpleForClause.parseString(
         #     "for $a in fn:distinct-values(book/author) return (book/author[. = $a][1], book[author = $a]/title)")
