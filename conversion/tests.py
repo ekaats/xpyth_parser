@@ -13,7 +13,7 @@ class Test:
             self.test = None
 
     def __repr__(self):
-        return f"{self.test_type} test"
+        return f"Test() type:'{self.test_type}, test:{self.test}'"
 
     def __eq__(self, other):
         if not isinstance(other, Test):
