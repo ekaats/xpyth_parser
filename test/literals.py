@@ -6,7 +6,7 @@ from grammar.literals import t_IntegerLiteral, t_DecimalLiteral, t_DoubleLiteral
 import unittest
 
 
-class XPath_parser_tests(unittest.TestCase):
+class TiteralTests(unittest.TestCase):
 
     def test_numeric_literals(self):
         """

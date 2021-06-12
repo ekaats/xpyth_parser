@@ -5,7 +5,7 @@ from conversion.tests import Test
 from conversion.qname import QName
 
 
-class XPath_parser_tests(unittest.TestCase):
+class ExpressionTests(unittest.TestCase):
 
     def test_kind_tests(self):
         # Empty document-node

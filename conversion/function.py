@@ -14,6 +14,11 @@ class Function:
     def __repr__(self):
         return f"Function: {type(self)} ({self.arguments})"
 
+    def __eq__(self, other):
+        if not isinstance(other, Function):
+            return NotImplemented
+        return self.arguments == other.arguments and type(self) == type(other)
+
 class Sum(Function):
 
     def run(self):

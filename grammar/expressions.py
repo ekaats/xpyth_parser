@@ -6,11 +6,13 @@ from pyparsing import (
     OneOrMore,
     ZeroOrMore,
     Forward,
-    Keyword, Word,
+    Keyword,
+    Word, Suppress,
 )
 
 from conversion.arithmetic import parenthesized_expression
 from conversion.calculation import get_comparison_operator
+
 from conversion.function import get_function
 from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Literal
 
@@ -103,8 +105,12 @@ t_AxisStep.setName("AxisStep")
 
 """ Parentisized Expressions """
 t_ParenthesizedExpr = l_par_l + Optional(t_Expr) + l_par_r
+# Here we do not want to suppress the parentheses, but combine the expression as is
+# t_ParenthesizedExpr = Combine(Literal("(") + Optional(t_Expr) + Literal(")"))
+# t_ParenthesizedExpr = Literal("(") + Optional(t_Expr) + Literal(")")
 t_ParenthesizedExpr.setName("ParenthesizedExpr")
 t_ParenthesizedExpr.setParseAction(parenthesized_expression)
+# t_ParenthesizedExpr.setParseAction(lambda v: tuple(v))
 """ end Parentisized Expressions  """
 
 """ Static Function Calls """
@@ -112,7 +118,7 @@ t_ArgumentPlaceholder = Literal("?")
 t_ArgumentPlaceholder.setName("ArgumentPlaceholder")
 t_Argument = t_ExprSingle | t_ArgumentPlaceholder
 t_Argument.setName("Argument")
-t_ArgumentList = l_par_l + t_Argument + Optional(ZeroOrMore(Literal(",") + t_Argument)) + l_par_r
+t_ArgumentList = l_par_l + t_Argument + Optional(ZeroOrMore(Suppress(Literal(",")) + t_Argument)) + l_par_r
 t_ArgumentList.setName("ArgumentList")
 
 
@@ -128,8 +134,8 @@ tx_FunctionCall.setParseAction(get_function)
 
 """ end Static Function Calls """
 
-t_PrimaryExpr = (tx_FunctionCall | t_ParenthesizedExpr | t_Literal | t_VarRef | t_ContextItemExpr
-)
+t_PrimaryExpr = tx_FunctionCall | t_ParenthesizedExpr | t_Literal | t_VarRef | t_ContextItemExpr
+
 t_PrimaryExpr.setName("PrimaryExpr")
 
 
@@ -290,7 +296,7 @@ t_UnionExpr.setName("UnionExpr")
 
 """ Arithmetic Expressions """
 t_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(
-    MatchFirst(Keyword("*") | Keyword("div") | Keyword("idiv") | Keyword("mod")) + t_UnionExpr
+    MatchFirst(Literal("*") | Keyword("div") | Keyword("idiv") | Keyword("mod")) + t_UnionExpr
 )
 t_MultiplicativeExpr.setName("MultiplicativeExpr")
 
@@ -313,7 +319,7 @@ t_ValueComp.setName("ValueComp")
 
 
 t_GeneralComp = (
-    Literal("=") | Literal("!=") | Literal("<") | Literal("<=") | Literal(">") | Literal(">=")
+    Keyword("=") | Keyword("!=") | Keyword("<") | Keyword("<=") | Keyword(">") | Keyword(">=")
 )
 t_GeneralComp.setName("GeneralComp")
 
@@ -325,7 +331,7 @@ t_NodeComp.setName("NodeCOmp")
 if xpath_version == "2.0":
     t_ComparisonExpr = t_RangeExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_RangeExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
-    t_ComparisonExpr.setParseAction(get_comparison_operator)
+    # t_ComparisonExpr.setParseAction(get_comparison_operator)
 
 elif xpath_version == "3.1":
     t_StringConcatExpr = t_RangeExpr + ZeroOrMore(Word("||") + t_AdditiveExpr)
@@ -333,7 +339,7 @@ elif xpath_version == "3.1":
 
     t_ComparisonExpr = t_StringConcatExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_StringConcatExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
-    t_ComparisonExpr.setParseAction(get_comparison_operator)
+    # t_ComparisonExpr.setParseAction(get_comparison_operator)
 
 """ end Comparison expresisons"""
 
@@ -342,8 +348,18 @@ elif xpath_version == "3.1":
 t_AndExpr = t_ComparisonExpr + ZeroOrMore(Keyword("and") + t_ComparisonExpr)
 t_AndExpr.setName("AndExpr")
 
+# t_OrExpr = Combine(t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr))
+# t_OrExpr.setName("OrExpr")
+#
+
+
 t_OrExpr = t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr)
+# t_OrExpr = Combine(t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr))
 t_OrExpr.setName("OrExpr")
+
+# p_ParseOrExpr = infixNotation(t_OrExpr)
+# t_OrExpr.setParseAction(get_arth, p_ParseOrExpr)
+# t_OrExpr.setParseAction(get_arth)
 
 """ end Logical Expressions """
 
@@ -363,7 +379,8 @@ t_IfExpr.setName("IfExpr")
 """ end Conditional Expression """
 
 # Set ExprSingle with actual expressions
-t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr | t_PrimaryExpr
+# t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr | t_PrimaryExpr
+t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr
 
 
 t_XPath = t_Expr

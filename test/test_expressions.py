@@ -1,12 +1,14 @@
 import unittest
 
 from conversion.calculation import Calculation
+from conversion.function import Function
 from conversion.qname import QName
 
-from grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath
+from grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath, t_ComparisonExpr, \
+    t_ParenthesizedExpr
 
 
-class XPath_parser_tests(unittest.TestCase):
+class ExpressionTests(unittest.TestCase):
 
 
 
@@ -21,30 +23,47 @@ class XPath_parser_tests(unittest.TestCase):
 
         # Parenthesized Expression
 
-        results = t_XPath.parseString("(1 + localname) - (3 + 5)")
-        r_list = list(results)
-        print(r_list)
+        self.assertEqual(list(t_AdditiveExpr.parseString("1 + 2", parseAll=True)), [1, "+", 2])
+        # self.assertEqual(list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True)),
+        #                  [Calculation(operator="+", value_1=1, value_2=2)])
+        self.assertEqual(list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True)),
+                         [1, "+", 2])
 
-        self.assertEqual(list(t_PrimaryExpr.parseString("(1 + 2)", parseAll=True)), [(Calculation(operator="+", value_1=1, value_2=2),)])
-        self.assertEqual(list(t_XPath.parseString("(1 + localname) - (3 + 5)", parseAll=True)),
-                         [Calculation(operator="-",
-                                      value_1=Calculation(operator="+", value_1=1, value_2=QName(localname="localname")),
-                                      value_2=Calculation(operator="+", value_1=3, value_2=5)
-                                      )
-                          ])
-        self.assertEqual(list(t_XPath.parseString("(1 * 2 - (3 + 5)) * 2", parseAll=True)),
-                         [Calculation(operator="-",
-                                      value_1=Calculation(operator="+", value_1=1, value_2=QName(localname="localname")),
-                                      value_2=Calculation(operator="+", value_1=3, value_2=5)
-                                      )
-                          ])
+        self.assertEqual(list(t_XPath.parseString("(1 + 2 + 3) * (3 - 5)", parseAll=True)),
+                         [(1, "+", 2, "+", 3), "*", (3, "-", 5,)])
+        self.assertEqual(list(t_XPath.parseString("(1 + 2 + localname) * (3 - 5)", parseAll=True)),
+                         [(1, "+", 2, "+", QName(localname="localname")), "*", (3, "-", 5)])
+
+        # self.assertEqual(list(t_XPath.parseString("(1 + localname) - (3 + 5)", parseAll=True)),
+        #                  [Calculation(operator="-",
+        #                               value_1=Calculation(operator="+", value_1=1, value_2=QName(localname="localname")),
+        #                               value_2=Calculation(operator="+", value_1=3, value_2=5)
+        #                               )
+        #                   ])
+        # self.assertEqual(list(t_XPath.parseString("(1 + localname) - (3 + 5)", parseAll=True)),
+        #                  [Calculation(operator="-",
+        #                               value_1=Calculation(operator="+", value_1=1, value_2=QName(localname="localname")),
+        #                               value_2=Calculation(operator="+", value_1=3, value_2=5)
+        #                               )
+        #                   ])
+        #
+        #
+        # self.assertEqual(list(t_XPath.parseString("(1 * 2 - (3 + 5)) * 2", parseAll=True)),
+        #                  [Calculation(operator="-",
+        #                               value_1=Calculation(operator="+", value_1=1, value_2=QName(localname="localname")),
+        #                               value_2=Calculation(operator="+", value_1=3, value_2=5)
+        #                               )
+        #                   ])
 
         # Context Item Expression
         self.assertEqual(list(t_PrimaryExpr.parseString(".", parseAll=True)), ["."])
 
         # Function Call
+        # self.assertEqual(list(t_PrimaryExpr.parseString("my:function(1,2)", parseAll=True)),
+        #                  [QName(prefix="my", localname='function'), 1, ',', 2])
         self.assertEqual(list(t_PrimaryExpr.parseString("my:function(1,2)", parseAll=True)),
-                         [QName(prefix="my", localname='function'), 1, ',', 2])
+                         [Function(arguments=[1, 2])])
+
 
     def test_operators(self):
         self.assertEqual(list(t_UnaryExpr.parseString(f"+ 1", parseAll=True)), ["+", 1])

@@ -6,7 +6,7 @@ from pyparsing import ParseException
 
 from grammar.qualified_names import t_QName, t_VarName, t_Wildcard
 
-class XPath_parser_tests(unittest.TestCase):
+class QualifiedNameTests(unittest.TestCase):
 
     def test_qualified_names(self):
         # Prefix
