@@ -121,21 +121,16 @@ t_Argument.setName("Argument")
 t_ArgumentList = l_par_l + t_Argument + Optional(ZeroOrMore(Suppress(Literal(",")) + t_Argument)) + l_par_r
 t_ArgumentList.setName("ArgumentList")
 
+tx_FunctionName = t_EQName
 
-tx_SupportedBuildinXBRLFunction = Literal("xfi:is-instant-period") | Literal("xfi:period")
-tx_SupportedBuildinFunction = Literal("sum") | tx_SupportedBuildinXBRLFunction
+t_FunctionCall = tx_FunctionName + t_ArgumentList
 
-tx_FunctionName = t_EQName | tx_SupportedBuildinFunction
-
-tx_FunctionCall = tx_FunctionName + t_ArgumentList
-# t_FunctionCall = t_EQName + t_ArgumentList
-
-tx_FunctionCall.setName("FunctionCall")
-tx_FunctionCall.setParseAction(get_function)
+t_FunctionCall.setName("FunctionCall")
+t_FunctionCall.setParseAction(get_function)
 
 """ end Static Function Calls """
 
-t_PrimaryExpr = tx_FunctionCall | t_ParenthesizedExpr | t_Literal | t_VarRef | t_ContextItemExpr
+t_PrimaryExpr = t_FunctionCall | t_ParenthesizedExpr | t_Literal | t_VarRef | t_ContextItemExpr
 
 t_PrimaryExpr.setName("PrimaryExpr")
 
@@ -349,14 +344,14 @@ elif xpath_version == "3.1":
 t_AndExpr = t_ComparisonExpr + ZeroOrMore(Keyword("and") + t_ComparisonExpr)
 t_AndExpr.setName("AndExpr")
 
-# t_OrExpr = Combine(t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr))
-# t_OrExpr.setName("OrExpr")
-#
+# def or_check(value):
+#     v_l = list(value)
+#     print(value)
 
 
 t_OrExpr = t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr)
-# t_OrExpr = Combine(t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr))
 t_OrExpr.setName("OrExpr")
+# t_OrExpr.setParseAction(or_check)
 
 # p_ParseOrExpr = infixNotation(t_OrExpr)
 # t_OrExpr.setParseAction(get_arth, p_ParseOrExpr)
