@@ -122,7 +122,8 @@ t_ArgumentList = l_par_l + t_Argument + Optional(ZeroOrMore(Suppress(Literal(","
 t_ArgumentList.setName("ArgumentList")
 
 
-tx_SupportedBuildinFunction = Literal("sum")
+tx_SupportedBuildinXBRLFunction = Literal("xfi:is-instant-period") | Literal("xfi:period")
+tx_SupportedBuildinFunction = Literal("sum") | tx_SupportedBuildinXBRLFunction
 
 tx_FunctionName = t_EQName | tx_SupportedBuildinFunction
 

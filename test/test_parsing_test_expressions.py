@@ -5,7 +5,7 @@ from conversion.tests import Test
 from conversion.qname import QName
 
 
-class ExpressionTests(unittest.TestCase):
+class TestKindTests(unittest.TestCase):
 
     def test_kind_tests(self):
         # Empty document-node
@@ -51,6 +51,3 @@ class ExpressionTests(unittest.TestCase):
         for keyword in ["comment", "text", "node"]:
             self.assertEqual(list(t_KindTest.parseString(f"{keyword}()", parseAll=True)),
                              [Test(test_type=f"{keyword}")])
-
-if __name__ == '__main__':
-    unittest.main()

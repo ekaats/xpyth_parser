@@ -43,12 +43,9 @@ t_EQName.setName("EQName")
 t_VarName = t_AtomicType = t_ElementName = t_TypeName = t_AttributeName = t_QName
 t_VarName.setName("Varname")
 
-
-
 t_VarRef = Suppress(Literal("$")) + t_VarName
 t_VarRef.setParseAction(get_variable)
 t_VarRef.setName("VarRef")
-
 
 t_AtomicType.setName("AtomicType")
 t_ElementName.setName("ElementName")

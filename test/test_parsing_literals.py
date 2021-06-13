@@ -1,16 +1,18 @@
+import unittest
 from pyparsing import ParseException
 
+from grammar.expressions import t_PrimaryExpr
 from grammar.literals import t_IntegerLiteral, t_DecimalLiteral, t_DoubleLiteral, t_NumericLiteral, t_StringLiteral, \
-    t_Char, t_NameStartChar, t_NCName
-
-import unittest
+    t_Char, t_NameStartChar, t_NCName, t_NameChar
 
 
-class TiteralTests(unittest.TestCase):
+
+
+class TestLiterals(unittest.TestCase):
 
     def test_numeric_literals(self):
         """
-        Tests if the most primitive parts of the parser work
+        Run tests for Integer, Decimal and Numeric literals
         """
 
         # Test directly
@@ -28,7 +30,7 @@ class TiteralTests(unittest.TestCase):
 
     def test_char_literals(self):
         """
-        Test the other kind of literals and chars
+        Run NameChar literal and other character specific tests
         """
         self.assertEqual(list(t_StringLiteral.parseString("'test'", parseAll=True)), ["test"])
         self.assertEqual(list(t_StringLiteral.parseString('"String"', parseAll=True)), ["String"])
@@ -40,11 +42,19 @@ class TiteralTests(unittest.TestCase):
 
         self.assertEqual(list(t_NameStartChar.parseString("a", parseAll=True)), ['a'])
         self.assertEqual(list(t_NameStartChar.parseString("Q", parseAll=True)), ['Q'])
+        self.assertEqual(list(t_NameChar.parseString("-", parseAll=True)), ["-"])
+        self.assertEqual(list(t_NCName.parseString("function-with-minus-sign", parseAll=True)), ["function-with-minus-sign"])
 
 
         self.assertEqual(list(t_NCName.parseString("T3st", parseAll=True)), ['T3st'])
         # The next test should fail as the colon is not allowed
         self.assertRaises(ParseException, t_NCName.parseString, "T3st:ds", parseAll=True)
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_string_literals(self):
+        """
+        Run tests on string literals
+        """
+
+
+        # (String) literal
+        self.assertEqual(list(t_PrimaryExpr.parseString("'String literal'", parseAll=True)), ["String literal"])
