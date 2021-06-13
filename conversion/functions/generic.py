@@ -2,7 +2,7 @@
 
 class Function:
 
-    def __init__(self, qname, arguments, function_name=None):
+    def __init__(self, arguments, qname, function_name=None):
         self.arguments = arguments
         self.qname = qname
 
