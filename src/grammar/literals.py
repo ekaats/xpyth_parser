@@ -10,7 +10,7 @@ from pyparsing import (
     Suppress,
 )
 
-from conversion.primaries import str_to_int, str_to_float
+from src.conversion.primaries import str_to_int, str_to_float
 
 xpath_version = "3.1"
 

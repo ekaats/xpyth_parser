@@ -1,10 +1,9 @@
 
 import unittest
 
-from conversion.functions.aggregate import Count, Avg, Max, Min, Sum
-from conversion.qname import QName
-from conversion.tests import Test
-from grammar.expressions import t_XPath
+from src.conversion.functions.aggregate import Count, Avg, Max, Min, Sum
+from src.conversion.qname import QName
+from src.grammar.expressions import t_XPath
 
 
 class FunctionsOperatorsSequences(unittest.TestCase):

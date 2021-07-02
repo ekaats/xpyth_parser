@@ -32,13 +32,17 @@ class Calculation:
 
 
 
-def get_comparison_operator(a, v):
+def get_comparison_operator(v):
+
+
+    l_values = list(v)
 
     value_1 = v[0]
     operator = v[1]
     value_2 = v[2]
 
     return Calculation(operator=operator, value_1=value_1, value_2=value_2)
+    # return (v)
 
 # def get_arth(value):
 #     p_opListOrParser = [

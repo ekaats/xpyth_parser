@@ -1,8 +1,8 @@
 import unittest
 from pyparsing import ParseException
 
-from grammar.expressions import t_PrimaryExpr
-from grammar.literals import t_IntegerLiteral, t_DecimalLiteral, t_DoubleLiteral, t_NumericLiteral, t_StringLiteral, \
+from src.grammar.expressions import t_PrimaryExpr
+from src.grammar.literals import t_IntegerLiteral, t_DecimalLiteral, t_DoubleLiteral, t_NumericLiteral, t_StringLiteral, \
     t_Char, t_NameStartChar, t_NCName, t_NameChar
 
 

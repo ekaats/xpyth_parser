@@ -1,11 +1,9 @@
 import unittest
+import operator
+from src.conversion.function import Function
+from src.conversion.qname import QName
 
-from conversion.calculation import Calculation
-from conversion.function import Function
-from conversion.qname import QName
-
-from grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath, t_ComparisonExpr, \
-    t_ParenthesizedExpr
+from src.grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath, t_ParenthesizedExpr
 
 
 class ExpressionTests(unittest.TestCase):
@@ -23,16 +21,16 @@ class ExpressionTests(unittest.TestCase):
 
         # Parenthesized Expression
 
-        self.assertEqual(list(t_AdditiveExpr.parseString("1 + 2", parseAll=True)), [1, "+", 2])
+        self.assertEqual(list(t_AdditiveExpr.parseString("1 + 2", parseAll=True)), [1, operator.add, 2])
         # self.assertEqual(list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True)),
         #                  [Calculation(operator="+", value_1=1, value_2=2)])
         self.assertEqual(list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True)),
-                         [1, "+", 2])
+                         [1, operator.add, 2])
 
         self.assertEqual(list(t_XPath.parseString("(1 + 2 + 3) * (3 - 5)", parseAll=True)),
-                         [(1, "+", 2, "+", 3), "*", (3, "-", 5,)])
+                         [(1, operator.add, 2, operator.add, 3), operator.mul, (3, operator.sub, 5,)])
         self.assertEqual(list(t_XPath.parseString("(1 + 2 + localname) * (3 - 5)", parseAll=True)),
-                         [(1, "+", 2, "+", QName(localname="localname")), "*", (3, "-", 5)])
+                         [(1, operator.add, 2, operator.add, QName(localname="localname")), operator.mul, (3, operator.sub, 5)])
 
 
         # Context Item Expression
@@ -52,5 +50,5 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(list(t_UnaryExpr.parseString("+ ()", parseAll=True)), ["+", ()])
 
         # Additive Expressions
-        self.assertEqual(list(t_AdditiveExpr.parseString("1 + 1", parseAll=True)), [1, "+", 1])
+        self.assertEqual(list(t_AdditiveExpr.parseString("1 + 1", parseAll=True)), [1, operator.add, 1])
 

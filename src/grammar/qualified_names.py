@@ -6,8 +6,8 @@ from pyparsing import (
      Suppress,
 )
 
-from conversion.qname import qname_from_parse_results, get_variable
-from grammar.literals import t_NCName
+from src.conversion.qname import qname_from_parse_results, get_variable
+from src.grammar.literals import t_NCName
 
 """
 4. Qualified Names

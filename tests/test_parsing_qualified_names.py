@@ -1,11 +1,10 @@
 import unittest
 
-from conversion.qname import QName
+from src.conversion.qname import QName
 
 from pyparsing import ParseException
 
-from grammar.literals import t_Name
-from grammar.qualified_names import t_QName, t_VarName, t_Wildcard
+from src.grammar.qualified_names import t_QName, t_VarName, t_Wildcard
 
 class QualifiedNameTests(unittest.TestCase):
 
