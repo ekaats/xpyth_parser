@@ -6,8 +6,6 @@ from src.grammar.literals import t_IntegerLiteral, t_DecimalLiteral, t_DoubleLit
     t_Char, t_NameStartChar, t_NCName, t_NameChar
 
 
-
-
 class TestLiterals(unittest.TestCase):
 
     def test_numeric_literals(self):

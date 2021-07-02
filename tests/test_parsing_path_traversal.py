@@ -5,6 +5,7 @@ from src.conversion.qname import QName
 from src.conversion.tests import Test
 from src.grammar.expressions import t_PredicateList, t_ForwardAxis, t_ForwardStep, t_ReverseAxis, t_ReverseStep
 
+
 class PathTraversalTests(unittest.TestCase):
     """
     Test path traversal

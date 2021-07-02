@@ -412,16 +412,16 @@ t_IfExpr = (
 )
 t_IfExpr.setName("IfExpr")
 """ end Conditional Expression """
-
-def brrr(value):
-    l_val = list(value)
-    # todo: continue here.
-    #  probably should try and combine the whole expression at the highest level(?)
-    return value
+#
+# def brrr(value):
+#     l_val = list(value)
+#     # todo: continue here.
+#     #  probably should try and combine the whole expression at the highest level(?)
+#     return value
 
 # Set ExprSingle with actual expressions
 t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr
-t_ExprSingle.setParseAction(brrr)
+# t_ExprSingle.setParseAction(brrr)
 
 t_XPath = t_Expr
 t_XPath.setName("XPath")

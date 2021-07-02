@@ -4,10 +4,10 @@ from pyparsing import (
     Keyword, Literal,
 )
 
-from src.conversion.tests import elementTest, schemaElementTest, documentTest, schemaAttributeTest, commentTest, textTest, \
-    anyKindTest, processingInstructionTest
 from .literals import l_par_l, l_par_r, t_NCName, t_StringLiteral
 from .qualified_names import t_TypeName, t_ElementName, t_AttributeName, t_QName, t_Wildcard
+from ..conversion.tests import elementTest, schemaElementTest, documentTest, schemaAttributeTest, commentTest, textTest, \
+    anyKindTest, processingInstructionTest
 
 """
 TESTS

@@ -1,8 +1,8 @@
 import unittest
 import operator
-from src.conversion.function import Function
-from src.conversion.qname import QName
 
+from src.conversion.functions.generic import Function
+from src.conversion.qname import QName
 from src.grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath, t_ParenthesizedExpr
 
 

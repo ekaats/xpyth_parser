@@ -1,8 +1,8 @@
 import unittest
 
-from src.grammar.tests import t_KindTest
-from src.conversion.tests import Test
 from src.conversion.qname import QName
+from src.conversion.tests import Test
+from src.grammar.tests import t_KindTest
 
 
 class TestKindTests(unittest.TestCase):
