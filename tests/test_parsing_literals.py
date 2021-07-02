@@ -1,9 +1,10 @@
 import unittest
 from pyparsing import ParseException
 
-from src.grammar.expressions import t_PrimaryExpr
-from src.grammar.literals import t_IntegerLiteral, t_DecimalLiteral, t_DoubleLiteral, t_NumericLiteral, t_StringLiteral, \
+
+from src.xpyth_parser.grammar.literals import t_IntegerLiteral, t_DecimalLiteral, t_DoubleLiteral, t_NumericLiteral, t_StringLiteral, \
     t_Char, t_NameStartChar, t_NCName, t_NameChar
+from src.xpyth_parser.grammar.expressions import t_PrimaryExpr
 
 
 class TestLiterals(unittest.TestCase):

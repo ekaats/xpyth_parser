@@ -1,7 +1,3 @@
-from plusminus import BaseArithmeticParser
-from pyparsing import infixNotation
-
-
 class Calculation:
 
     def __init__(self, operator, value_1, value_2):

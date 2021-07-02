@@ -1,8 +1,8 @@
 
 import unittest
 
-from src.conversion.functions.aggregate import Count, Avg, Max, Min, Sum
-from src.conversion.qname import QName
+from src.xpyth_parser.conversion.functions.aggregate import Count, Avg, Max, Min, Sum
+from src.xpyth_parser.conversion.qname import QName
 from src.xpyth_parser.parse import XPath
 
 

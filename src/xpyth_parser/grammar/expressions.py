@@ -12,11 +12,12 @@ from pyparsing import (
     Word, Suppress,
 )
 
-from src.conversion.function import get_function
+
 from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Literal
 
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
+from ..conversion.function import get_function
 
 xpath_version = "3.1"
 

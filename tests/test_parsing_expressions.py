@@ -1,9 +1,9 @@
 import unittest
 import operator
 
-from src.conversion.functions.generic import Function
-from src.conversion.qname import QName
-from src.grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath, t_ParenthesizedExpr
+from src.xpyth_parser.conversion.functions.generic import Function
+from src.xpyth_parser.conversion.qname import QName
+from src.xpyth_parser.grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath, t_ParenthesizedExpr
 
 
 class ExpressionTests(unittest.TestCase):

@@ -1,9 +1,9 @@
 
 import unittest
 
-from src.conversion.qname import QName
-from src.conversion.tests import Test
-from src.grammar.expressions import t_PredicateList, t_ForwardAxis, t_ForwardStep, t_ReverseAxis, t_ReverseStep
+from src.xpyth_parser.conversion.qname import QName
+from src.xpyth_parser.conversion.tests import Test
+from src.xpyth_parser.grammar.expressions import t_PredicateList, t_ForwardAxis, t_ForwardStep, t_ReverseAxis, t_ReverseStep
 
 
 class PathTraversalTests(unittest.TestCase):

@@ -1,4 +1,4 @@
-from src.conversion.functions.generic import Function
+from .generic import Function
 
 
 class Count(Function):

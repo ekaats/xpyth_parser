@@ -1,5 +1,5 @@
-from src.conversion.functions.aggregate import get_aggregate_function
-from src.conversion.functions.generic import Function
+from .functions.aggregate import get_aggregate_function
+from .functions.generic import Function
 
 
 def get_function(v):
