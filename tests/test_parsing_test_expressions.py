@@ -1,11 +1,11 @@
 import unittest
 
-from grammar.tests import t_KindTest
-from conversion.tests import Test
-from conversion.qname import QName
+from src.xpyth_parser.conversion.qname import QName
+from src.xpyth_parser.conversion.tests import Test
+from src.xpyth_parser.grammar.tests import t_KindTest
 
 
-class XPath_parser_tests(unittest.TestCase):
+class TestKindTests(unittest.TestCase):
 
     def test_kind_tests(self):
         # Empty document-node
@@ -51,6 +51,3 @@ class XPath_parser_tests(unittest.TestCase):
         for keyword in ["comment", "text", "node"]:
             self.assertEqual(list(t_KindTest.parseString(f"{keyword}()", parseAll=True)),
                              [Test(test_type=f"{keyword}")])
-
-if __name__ == '__main__':
-    unittest.main()

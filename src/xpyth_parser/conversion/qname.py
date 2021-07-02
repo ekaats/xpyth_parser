@@ -51,4 +51,4 @@ class Parameter:
     def __eq__(self, other):
         if not isinstance(other, Parameter):
             return NotImplemented
-        return self.localname == other.localname
+        return self.qname == other.qname

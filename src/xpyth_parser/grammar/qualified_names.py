@@ -6,8 +6,8 @@ from pyparsing import (
      Suppress,
 )
 
-from conversion.qname import qname_from_parse_results, get_variable
-from grammar.literals import t_NCName
+from .literals import t_NCName
+from ..conversion.qname import qname_from_parse_results, get_variable
 
 """
 4. Qualified Names
@@ -43,12 +43,9 @@ t_EQName.setName("EQName")
 t_VarName = t_AtomicType = t_ElementName = t_TypeName = t_AttributeName = t_QName
 t_VarName.setName("Varname")
 
-
-
 t_VarRef = Suppress(Literal("$")) + t_VarName
 t_VarRef.setParseAction(get_variable)
 t_VarRef.setName("VarRef")
-
 
 t_AtomicType.setName("AtomicType")
 t_ElementName.setName("ElementName")

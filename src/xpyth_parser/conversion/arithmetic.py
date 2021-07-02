@@ -8,5 +8,6 @@ class Parenthesized_Expression():
 def parenthesized_expression(expr):
     # print()
     # return Parenthesized_Expression(expr=v)
+    expr_list = list(expr)
     return_value = tuple(expr)
     return (return_value)

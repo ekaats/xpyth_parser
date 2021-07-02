@@ -1,3 +1,5 @@
+import operator
+
 from pyparsing import (
     Combine,
     Literal,
@@ -6,16 +8,16 @@ from pyparsing import (
     OneOrMore,
     ZeroOrMore,
     Forward,
-    Keyword, Word,
+    Keyword,
+    Word, Suppress,
 )
 
-from conversion.arithmetic import parenthesized_expression
-from conversion.calculation import get_comparison_operator
-from conversion.function import get_function
+
 from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Literal
 
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
+from ..conversion.function import get_function
 
 xpath_version = "3.1"
 
@@ -103,8 +105,10 @@ t_AxisStep.setName("AxisStep")
 
 """ Parentisized Expressions """
 t_ParenthesizedExpr = l_par_l + Optional(t_Expr) + l_par_r
+
 t_ParenthesizedExpr.setName("ParenthesizedExpr")
-t_ParenthesizedExpr.setParseAction(parenthesized_expression)
+# Explicitly put Parenthesized expressions into a tuple.
+t_ParenthesizedExpr.setParseAction(lambda v: tuple(v))
 """ end Parentisized Expressions  """
 
 """ Static Function Calls """
@@ -112,24 +116,20 @@ t_ArgumentPlaceholder = Literal("?")
 t_ArgumentPlaceholder.setName("ArgumentPlaceholder")
 t_Argument = t_ExprSingle | t_ArgumentPlaceholder
 t_Argument.setName("Argument")
-t_ArgumentList = l_par_l + t_Argument + Optional(ZeroOrMore(Literal(",") + t_Argument)) + l_par_r
+t_ArgumentList = l_par_l + t_Argument + Optional(ZeroOrMore(Suppress(Literal(",")) + t_Argument)) + l_par_r
 t_ArgumentList.setName("ArgumentList")
 
+tx_FunctionName = t_EQName
 
-tx_SupportedBuildinFunction = Literal("sum")
+t_FunctionCall = tx_FunctionName + t_ArgumentList
 
-tx_FunctionName = t_EQName | tx_SupportedBuildinFunction
-
-tx_FunctionCall = tx_FunctionName + t_ArgumentList
-# t_FunctionCall = t_EQName + t_ArgumentList
-
-tx_FunctionCall.setName("FunctionCall")
-tx_FunctionCall.setParseAction(get_function)
+t_FunctionCall.setName("FunctionCall")
+t_FunctionCall.setParseAction(get_function)
 
 """ end Static Function Calls """
 
-t_PrimaryExpr = (tx_FunctionCall | t_ParenthesizedExpr | t_Literal | t_VarRef | t_ContextItemExpr
-)
+t_PrimaryExpr = t_FunctionCall | t_ParenthesizedExpr | t_Literal | t_VarRef | t_ContextItemExpr
+
 t_PrimaryExpr.setName("PrimaryExpr")
 
 
@@ -249,6 +249,8 @@ elif xpath_version == "3.1":
 # Subtractor needs to be preceded with a whitespace, but is allowed to be succeeded with non-whitespace
 # https://www.w3.org/TR/xpath-3/#id-arithmetic
 t_UnaryExpr = ZeroOrMore(Literal(" -") | Literal("+")) + t_ValueExpr
+
+# todo: Find how to deal with Unary expressions. They should probably be added to the ValueExpr they belong to.
 t_UnaryExpr.setName("UnaryExpr")
 
 
@@ -289,13 +291,35 @@ t_UnionExpr.setName("UnionExpr")
 
 
 """ Arithmetic Expressions """
-t_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(
-    MatchFirst(Keyword("*") | Keyword("div") | Keyword("idiv") | Keyword("mod")) + t_UnionExpr
-)
-t_MultiplicativeExpr.setName("MultiplicativeExpr")
 
-t_AdditiveExpr = t_MultiplicativeExpr + ZeroOrMore(
-    MatchFirst(Literal("+") | Literal("-")) + t_MultiplicativeExpr
+arth_ops = {
+    '+' : operator.add,
+    '-' : operator.sub,
+    '*' : operator.mul,
+    'div' : operator.truediv,
+    'mod' : operator.mod,
+}
+def get_arth_op(v):
+    for op_str, op_func in arth_ops.items():
+        if op_str == v[0]:
+            return op_func
+    return v[0]
+
+tx_ArithmeticMultiplicativeSymbol = Literal("*") | Keyword("div") | Keyword("idiv") | Keyword("mod")
+tx_ArithmeticMultiplicativeSymbol.setParseAction(get_arth_op)
+
+t_ArithmeticAdditiveSymbol = Literal("+") | Literal("-")
+t_ArithmeticAdditiveSymbol.setParseAction(get_arth_op)
+
+tx_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(
+    MatchFirst(tx_ArithmeticMultiplicativeSymbol) + t_UnionExpr
+)
+tx_MultiplicativeExpr.setName("MultiplicativeExpr")
+
+
+
+t_AdditiveExpr = tx_MultiplicativeExpr + ZeroOrMore(
+    MatchFirst(t_ArithmeticAdditiveSymbol) + tx_MultiplicativeExpr
 )
 t_AdditiveExpr.setName("Additive_Expr")
 
@@ -306,26 +330,44 @@ t_RangeExpr.setName("RangeExpr")
 
 
 """ Comparison expressions """
+
+comp_ops = {
+    'eq' : operator.eq,
+    'ne' : operator.ne,
+    'lt' : operator.lt,
+    'le' : operator.le,
+    'gt' : operator.gt,
+    'ge' : operator.ge,
+}
+
+def get_comp_op(v):
+    for op_str, op_func in comp_ops.items():
+        if op_str == v[0]:
+            return op_func
+    return v[0]
+
+
 t_ValueComp = (
     Keyword("eq") | Keyword("ne") | Keyword("lt") | Keyword("le") | Keyword("gt") | Keyword("ge")
 )
 t_ValueComp.setName("ValueComp")
+t_ValueComp.setParseAction(get_comp_op)
 
-
+# Todo: Cast GeneralComp in to pythonic operators. Could we use the same as for ValueComp?
 t_GeneralComp = (
-    Literal("=") | Literal("!=") | Literal("<") | Literal("<=") | Literal(">") | Literal(">=")
+    Keyword("=") | Keyword("!=") | Keyword("<") | Keyword("<=") | Keyword(">") | Keyword(">=")
 )
 t_GeneralComp.setName("GeneralComp")
 
 
 t_NodeComp = Word("is") | Word("<<") | Word(">>")
-t_NodeComp.setName("NodeCOmp")
+t_NodeComp.setName("NodeComp")
 
 
 if xpath_version == "2.0":
     t_ComparisonExpr = t_RangeExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_RangeExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
-    t_ComparisonExpr.setParseAction(get_comparison_operator)
+    # t_ComparisonExpr.addParseAction(get_comparison_operator)
 
 elif xpath_version == "3.1":
     t_StringConcatExpr = t_RangeExpr + ZeroOrMore(Word("||") + t_AdditiveExpr)
@@ -333,7 +375,7 @@ elif xpath_version == "3.1":
 
     t_ComparisonExpr = t_StringConcatExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_StringConcatExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
-    t_ComparisonExpr.setParseAction(get_comparison_operator)
+    # t_ComparisonExpr.addParseAction(get_comparison_operator)
 
 """ end Comparison expresisons"""
 
@@ -342,8 +384,18 @@ elif xpath_version == "3.1":
 t_AndExpr = t_ComparisonExpr + ZeroOrMore(Keyword("and") + t_ComparisonExpr)
 t_AndExpr.setName("AndExpr")
 
+# def or_check(value):
+#     v_l = list(value)
+#     print(value)
+
+
 t_OrExpr = t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr)
 t_OrExpr.setName("OrExpr")
+# t_OrExpr.setParseAction(or_check)
+
+# p_ParseOrExpr = infixNotation(t_OrExpr)
+# t_OrExpr.setParseAction(get_arth, p_ParseOrExpr)
+# t_OrExpr.setParseAction(get_arth)
 
 """ end Logical Expressions """
 
@@ -361,18 +413,25 @@ t_IfExpr = (
 )
 t_IfExpr.setName("IfExpr")
 """ end Conditional Expression """
+#
+# def brrr(value):
+#     l_val = list(value)
+#     # todo: continue here.
+#     #  probably should try and combine the whole expression at the highest level(?)
+#     return value
 
 # Set ExprSingle with actual expressions
-t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr | t_PrimaryExpr
-
+t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr
+# t_ExprSingle.setParseAction(brrr)
 
 t_XPath = t_Expr
 t_XPath.setName("XPath")
 
-def create_railroad():
-    from pyparsing.diagram import to_railroad, railroad_to_html
-
-    with open('/tmp/output.html', 'w') as fp:
-        railroad = to_railroad(t_Expr)
-        fp.write(railroad_to_html(railroad))
+# todo: Generating a railroad map requires Pyparsing 3.0. Uncomment when PP3.0 is released from beta
+# def create_railroad():
+#     from pyparsing.diagram import to_railroad, railroad_to_html
+#
+#     with open('/tmp/output.html', 'w') as fp:
+#         railroad = to_railroad(t_Expr)
+#         fp.write(railroad_to_html(railroad))
 
