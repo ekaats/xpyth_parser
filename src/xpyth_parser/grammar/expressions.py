@@ -17,6 +17,7 @@ from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Lit
 
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
+from ..conversion.calculation import get_ast
 from ..conversion.function import get_function
 
 xpath_version = "3.1"
@@ -94,7 +95,7 @@ t_ForwardStep.setName("ForwardStep")
 t_ReverseStep = (t_ReverseAxis + t_NodeTest) | t_AbbrevReverseStep
 t_ReverseStep.setName("ReverseStep")
 
-t_Predicate = "[" + t_Expr + "]"
+t_Predicate = Suppress("[") + t_Expr + Suppress("]")
 t_Predicate.setName("Predicate")
 
 t_PredicateList = ZeroOrMore(t_Predicate)
@@ -311,16 +312,12 @@ tx_ArithmeticMultiplicativeSymbol.setParseAction(get_arth_op)
 t_ArithmeticAdditiveSymbol = Literal("+") | Literal("-")
 t_ArithmeticAdditiveSymbol.setParseAction(get_arth_op)
 
-tx_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(
-    MatchFirst(tx_ArithmeticMultiplicativeSymbol) + t_UnionExpr
-)
+tx_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(tx_ArithmeticMultiplicativeSymbol + t_UnionExpr)
+
 tx_MultiplicativeExpr.setName("MultiplicativeExpr")
 
-
-
-t_AdditiveExpr = tx_MultiplicativeExpr + ZeroOrMore(
-    MatchFirst(t_ArithmeticAdditiveSymbol) + tx_MultiplicativeExpr
-)
+t_AdditiveExpr = tx_MultiplicativeExpr + ZeroOrMore(t_ArithmeticAdditiveSymbol + tx_MultiplicativeExpr)
+t_AdditiveExpr.setParseAction(get_ast)
 t_AdditiveExpr.setName("Additive_Expr")
 
 t_RangeExpr = t_AdditiveExpr + Optional(Keyword("to") + t_AdditiveExpr)
@@ -367,7 +364,6 @@ t_NodeComp.setName("NodeComp")
 if xpath_version == "2.0":
     t_ComparisonExpr = t_RangeExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_RangeExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
-    # t_ComparisonExpr.addParseAction(get_comparison_operator)
 
 elif xpath_version == "3.1":
     t_StringConcatExpr = t_RangeExpr + ZeroOrMore(Word("||") + t_AdditiveExpr)
@@ -375,7 +371,6 @@ elif xpath_version == "3.1":
 
     t_ComparisonExpr = t_StringConcatExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_StringConcatExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
-    # t_ComparisonExpr.addParseAction(get_comparison_operator)
 
 """ end Comparison expresisons"""
 
@@ -384,18 +379,9 @@ elif xpath_version == "3.1":
 t_AndExpr = t_ComparisonExpr + ZeroOrMore(Keyword("and") + t_ComparisonExpr)
 t_AndExpr.setName("AndExpr")
 
-# def or_check(value):
-#     v_l = list(value)
-#     print(value)
-
 
 t_OrExpr = t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr)
 t_OrExpr.setName("OrExpr")
-# t_OrExpr.setParseAction(or_check)
-
-# p_ParseOrExpr = infixNotation(t_OrExpr)
-# t_OrExpr.setParseAction(get_arth, p_ParseOrExpr)
-# t_OrExpr.setParseAction(get_arth)
 
 """ end Logical Expressions """
 

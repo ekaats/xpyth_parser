@@ -1,6 +1,6 @@
 import unittest
 import operator
-
+from ast import BinOp, Compare
 from src.xpyth_parser.conversion.functions.generic import Function
 from src.xpyth_parser.conversion.qname import QName
 from src.xpyth_parser.grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath, t_ParenthesizedExpr
@@ -21,16 +21,50 @@ class ExpressionTests(unittest.TestCase):
 
         # Parenthesized Expression
 
-        self.assertEqual(list(t_AdditiveExpr.parseString("1 + 2", parseAll=True)), [1, operator.add, 2])
-        # self.assertEqual(list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True)),
-        #                  [Calculation(operator="+", value_1=1, value_2=2)])
-        self.assertEqual(list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True)),
-                         [1, operator.add, 2])
+        self.assertTrue(Compare(list(t_AdditiveExpr.parseString("1 + 2", parseAll=True)), BinOp(1, operator.add, 2)))
 
-        self.assertEqual(list(t_XPath.parseString("(1 + 2 + 3) * (3 - 5)", parseAll=True)),
-                         [(1, operator.add, 2, operator.add, 3), operator.mul, (3, operator.sub, 5,)])
-        self.assertEqual(list(t_XPath.parseString("(1 + 2 + localname) * (3 - 5)", parseAll=True)),
-                         [(1, operator.add, 2, operator.add, QName(localname="localname")), operator.mul, (3, operator.sub, 5)])
+        self.assertTrue(Compare(list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True)),
+                         [BinOp(1, operator.add, 2)]))
+
+        self.assertTrue(Compare(list(t_XPath.parseString("(1 + 2 * 3) * (3 - 5)", parseAll=True)),
+                         [BinOp(1, operator.add, BinOp(2, operator.mul, 3)), operator.mul, BinOp(3, operator.sub, 5),]))
+
+
+        self.assertTrue(Compare(list(t_XPath.parseString("(1 + 2 * 3 - 4 / 5 * 6 - 7) * (3 - 5)", parseAll=True)),
+                         [
+                             BinOp(
+                                 BinOp(
+                                     BinOp(
+                                         BinOp(
+                                             BinOp(
+                                                 BinOp(
+                                                     BinOp(
+                                                         BinOp(
+                                                             1, operator.add, 2
+                                                         ),
+                                                         operator.mul, 3
+                                                     ),
+
+                                                 ),
+                                                 operator.sub,  4
+                                             ),
+                                             operator.truediv, 5
+                                               ),
+                                         operator.mul, 6
+                                     )
+                                 ),
+                                 operator.sub,  7
+                             ),
+                             operator.mul,
+                             BinOp(
+                                 3, operator.sub, 5
+                             )
+                         ]))
+
+        self.assertTrue(Compare(list(t_XPath.parseString("(1 + 2 + localname) * (3 - 5)", parseAll=True)),
+                         [
+                             BinOp(BinOp(1, operator.add, 2), operator.add, QName(localname="localname")),
+                             operator.mul, BinOp(3, operator.sub, 5)]))
 
 
         # Context Item Expression
@@ -50,5 +84,5 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(list(t_UnaryExpr.parseString("+ ()", parseAll=True)), ["+", ()])
 
         # Additive Expressions
-        self.assertEqual(list(t_AdditiveExpr.parseString("1 + 1", parseAll=True)), [1, operator.add, 1])
+        self.assertTrue(Compare(list(t_AdditiveExpr.parseString("1 + 1", parseAll=True)), [1, operator.add, 1]))
 

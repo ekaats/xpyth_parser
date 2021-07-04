@@ -1,58 +1,49 @@
-class Calculation:
-
-    def __init__(self, operator, value_1, value_2):
-        self.operator = operator
-
-        self.value_1 = value_1
-        self.value_2 = value_2
+import ast
+import operator
 
 
-    def __str__(self):
-        return f"Calc op='{self.operator}' v1='{self.value_1}' v2='{self.value_2}'"
+def add_node(i, l_values):
 
-    def __eq__(self, other):
-        if not isinstance(other, Calculation):
-            return NotImplemented
-        return self.operator == other.operator and self.value_1 == other.value_1 and self.value_2 == other.value_2
+    # Take operator and expressions out of the list
+    expr_right = l_values.pop(i + 1)
+    op = l_values.pop(1)
+    expr_left = l_values.pop(i - 1)
 
-    def ans(self):
+    # get the node
+    node = ast.BinOp(expr_left, op, expr_right)
 
-        if self.operator == "+":
-            return self.value_1 + self.value_2
-        elif self.operator == "-":
-            return self.value_1 - self.value_2
-        elif self.operator == "/":
-            return self.value_1 / self.value_2
-        elif self.operator == "*":
-            return self.value_1 * self.value_2
+    # Add node to list/tree
+    l_values.insert(i - 1, node)
+
+    return l_values
 
 
+def get_nodes(l_values):
 
-def get_comparison_operator(v):
+    # First loop though the whole equation and look for add/sub operators
+    for i, val in enumerate(l_values):
+        # go though list of values, try to find operators in order of precedence.
+
+        if  val in [operator.add, operator.sub]:
+            # Create a node for these
+            newlist = add_node(i=1, l_values=l_values)
+            return get_nodes(newlist)
+
+    # If add/sub operators have been handled, continue on with multiplication and dividing
+    for i, val in enumerate(l_values):
+        if  val in [operator.mul, operator.truediv]:
+            newlist = add_node(i=1, l_values=l_values)
+            return get_nodes(newlist)
 
 
+def get_ast(v):
     l_values = list(v)
 
-    value_1 = v[0]
-    operator = v[1]
-    value_2 = v[2]
+    # Loop though the equation and create a nested tree of BinOp objects
+    get_nodes(l_values)
 
-    return Calculation(operator=operator, value_1=value_1, value_2=value_2)
-    # return (v)
+    # If the final list only has one value, return that value instead of a list.
+    if len(l_values) == 1:
+        l_values = l_values[0]
 
-# def get_arth(value):
-#     p_opListOrParser = [
-#
-#     ]
-#     parser = BaseArithmeticParser()
-#     arth_expr = parser.parse(value)
-#     arth_eval = parser.evaluate(value)
-#
-#     # arth_expr = p_ParseOrExpr.parseString(value)
-#     # for i, elem in enumerate(arth_expr):
-#     #     print(f"{i}: {elem}")
-#     return arth_expr
-#
-#
-
-# get_arth("(1 * 2 - (3 + 5)) * 2")
+    return l_values
