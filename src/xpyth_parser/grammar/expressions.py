@@ -1,3 +1,4 @@
+import ast
 import operator
 
 from pyparsing import (
@@ -104,14 +105,6 @@ t_PredicateList.setName("PredicateList")
 t_AxisStep = (t_ReverseStep | t_ForwardStep) + t_PredicateList
 t_AxisStep.setName("AxisStep")
 
-""" Parentisized Expressions """
-t_ParenthesizedExpr = l_par_l + Optional(t_Expr) + l_par_r
-
-t_ParenthesizedExpr.setName("ParenthesizedExpr")
-# Explicitly put Parenthesized expressions into a tuple.
-t_ParenthesizedExpr.setParseAction(lambda v: tuple(v))
-""" end Parentisized Expressions  """
-
 """ Static Function Calls """
 t_ArgumentPlaceholder = Literal("?")
 t_ArgumentPlaceholder.setName("ArgumentPlaceholder")
@@ -128,6 +121,13 @@ t_FunctionCall.setName("FunctionCall")
 t_FunctionCall.setParseAction(get_function)
 
 """ end Static Function Calls """
+
+""" Parentisized Expressions """
+t_ParenthesizedExpr = l_par_l + Optional(t_Expr) + l_par_r
+t_ParenthesizedExpr.setName("ParenthesizedExpr")
+
+""" end Parentisized Expressions  """
+
 
 t_PrimaryExpr = t_FunctionCall | t_ParenthesizedExpr | t_Literal | t_VarRef | t_ContextItemExpr
 
@@ -223,15 +223,6 @@ t_UnaryLookup = Literal("?") + t_KeySpecifier
 
 """ end Primary Expressions"""
 
-
-""" Parentisized Expressions """
-t_ParenthesizedExpr = l_par_l + Optional(t_Expr) + l_par_r
-t_ParenthesizedExpr.setName("ParenthesizedExpr")
-
-""" end Parentisized Expressions  """
-
-
-
 """Comparison Expressions"""
 if xpath_version == "2.0":
     t_ValueExpr = t_PathExpr
@@ -293,13 +284,22 @@ t_UnionExpr.setName("UnionExpr")
 
 """ Arithmetic Expressions """
 
+# arth_ops = {
+#     '+' : operator.add,
+#     '-' : operator.sub,
+#     '*' : operator.mul,
+#     'div' : operator.truediv,
+#     'mod' : operator.mod,
+# }
 arth_ops = {
-    '+' : operator.add,
-    '-' : operator.sub,
-    '*' : operator.mul,
-    'div' : operator.truediv,
-    'mod' : operator.mod,
+    '+' : ast.Add(),
+    '-' : ast.Sub(),
+    '*' : ast.Mult(),
+    'div' : ast.Div(),
+    'mod' : ast.Mod(),
 }
+
+
 def get_arth_op(v):
     for op_str, op_func in arth_ops.items():
         if op_str == v[0]:
@@ -307,10 +307,8 @@ def get_arth_op(v):
     return v[0]
 
 tx_ArithmeticMultiplicativeSymbol = Literal("*") | Keyword("div") | Keyword("idiv") | Keyword("mod")
-tx_ArithmeticMultiplicativeSymbol.setParseAction(get_arth_op)
 
 t_ArithmeticAdditiveSymbol = Literal("+") | Literal("-")
-t_ArithmeticAdditiveSymbol.setParseAction(get_arth_op)
 
 tx_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(tx_ArithmeticMultiplicativeSymbol + t_UnionExpr)
 
@@ -320,6 +318,7 @@ t_AdditiveExpr = tx_MultiplicativeExpr + ZeroOrMore(t_ArithmeticAdditiveSymbol +
 t_AdditiveExpr.setParseAction(get_ast)
 t_AdditiveExpr.setName("Additive_Expr")
 
+
 t_RangeExpr = t_AdditiveExpr + Optional(Keyword("to") + t_AdditiveExpr)
 t_RangeExpr.setName("RangeExpr")
 
@@ -328,13 +327,22 @@ t_RangeExpr.setName("RangeExpr")
 
 """ Comparison expressions """
 
+# comp_ops = {
+#     'eq' : operator.eq,
+#     'ne' : operator.ne,
+#     'lt' : operator.lt,
+#     'le' : operator.le,
+#     'gt' : operator.gt,
+#     'ge' : operator.ge,
+# }
+
 comp_ops = {
-    'eq' : operator.eq,
-    'ne' : operator.ne,
-    'lt' : operator.lt,
-    'le' : operator.le,
-    'gt' : operator.gt,
-    'ge' : operator.ge,
+    'eq' : ast.Eq(),
+    'ne' : ast.NotEq(),
+    'lt' : ast.Lt(),
+    'le' : ast.LtE(),
+    'gt' : ast.Gt(),
+    'ge' : ast.GtE(),
 }
 
 def get_comp_op(v):
@@ -348,7 +356,6 @@ t_ValueComp = (
     Keyword("eq") | Keyword("ne") | Keyword("lt") | Keyword("le") | Keyword("gt") | Keyword("ge")
 )
 t_ValueComp.setName("ValueComp")
-t_ValueComp.setParseAction(get_comp_op)
 
 # Todo: Cast GeneralComp in to pythonic operators. Could we use the same as for ValueComp?
 t_GeneralComp = (
@@ -361,6 +368,7 @@ t_NodeComp = Word("is") | Word("<<") | Word(">>")
 t_NodeComp.setName("NodeComp")
 
 
+
 if xpath_version == "2.0":
     t_ComparisonExpr = t_RangeExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_RangeExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
@@ -371,6 +379,7 @@ elif xpath_version == "3.1":
 
     t_ComparisonExpr = t_StringConcatExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_StringConcatExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
+
 
 """ end Comparison expresisons"""
 
@@ -399,16 +408,9 @@ t_IfExpr = (
 )
 t_IfExpr.setName("IfExpr")
 """ end Conditional Expression """
-#
-# def brrr(value):
-#     l_val = list(value)
-#     # todo: continue here.
-#     #  probably should try and combine the whole expression at the highest level(?)
-#     return value
 
 # Set ExprSingle with actual expressions
 t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr
-# t_ExprSingle.setParseAction(brrr)
 
 t_XPath = t_Expr
 t_XPath.setName("XPath")
