@@ -22,51 +22,33 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(list(t_XPath.parseString("var:ref", parseAll=True)), [QName(prefix="var", localname='ref')])
 
         # Parenthesized Expression
+        l1 = list(t_AdditiveExpr.parseString("1 + 2", parseAll=True))
+        self.assertEqual(l1[0].left.value, 1)
+        self.assertTrue(isinstance(l1[0].op, ast.Add))
+        self.assertEqual(l1[0].right.value, 2)
 
-        self.assertTrue(ast.Compare(list(t_AdditiveExpr.parseString("1 + 2", parseAll=True)), ast.BinOp(1, operator.add, 2)))
+        l2 = list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True))
+        self.assertEqual(l2[0].left.value, 1)
+        self.assertTrue(isinstance(l2[0].op, ast.Add))
+        self.assertEqual(l2[0].right.value, 2)
 
-        self.assertTrue(ast.Compare(list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True)),
-                         [ast.BinOp(1, operator.add, 2)]))
+        l3 = list(t_XPath.parseString("(1 + 2 * 3) * (3 - 5)", parseAll=True))
+        self.assertEqual(l3[0].left.left.value, 1)
+        self.assertTrue(isinstance(l3[0].left.op, ast.Add))
 
-        self.assertTrue(ast.Compare(list(t_XPath.parseString("(1 + 2 * 3) * (3 - 5)", parseAll=True)),
-                         [ast.BinOp(1, operator.add, ast.BinOp(2, operator.mul, 3)), operator.mul, ast.BinOp(3, operator.sub, 5),]))
+        self.assertEqual(l3[0].left.right.left.value, 2)
+        self.assertTrue(isinstance(l3[0].left.right.op, ast.Mult))
+        self.assertEqual(l3[0].left.right.right.value, 3)
 
+        self.assertTrue(isinstance(l3[0].op, ast.Mult))
+        self.assertEqual(l3[0].right.left.value, 3)
+        self.assertTrue(isinstance(l3[0].right.op, ast.Sub))
+        self.assertEqual(l3[0].right.right.value, 5)
 
-        self.assertTrue(ast.Compare(list(t_XPath.parseString("(1 + 2 * 3 - 4 div 5 * 6 - 7) * (3 - 5)", parseAll=True)),
-                         [
-                             ast.BinOp(
-                                 ast.BinOp(
-                                     ast.BinOp(
-                                         ast.BinOp(
-                                             ast.BinOp(
-                                                 ast.BinOp(
-                                                     ast.BinOp(
-                                                         ast.BinOp(
-                                                             1, operator.add, 2
-                                                         ),
-                                                         operator.mul, 3
-                                                     ),
-
-                                                 ),
-                                                 operator.sub,  4
-                                             ),
-                                             operator.truediv, 5
-                                               ),
-                                         operator.mul, 6
-                                     )
-                                 ),
-                                 operator.sub,  7
-                             ),
-                             operator.mul,
-                             ast.BinOp(
-                                 3, operator.sub, 5
-                             )
-                         ]))
-
-        self.assertTrue(ast.Compare(list(t_XPath.parseString("(1 + 2 + localname) * (3 - 5)", parseAll=True)),
-                         [
-                             ast.BinOp(ast.BinOp(1, operator.add, 2), operator.add, QName(localname="localname")),
-                             operator.mul, ast.BinOp(3, operator.sub, 5)]))
+        l4 = list(t_XPath.parseString("(2 + localname)", parseAll=True))
+        self.assertEqual(l4[0].left.value, 2)
+        self.assertTrue(isinstance(l4[0].op, ast.Add))
+        self.assertEqual(l4[0].right, QName(localname="localname"))
 
 
         # Context Item Expression
@@ -81,37 +63,36 @@ class ExpressionTests(unittest.TestCase):
         """
         Test operative expressions
         """
-        self.assertTrue(ast.Compare(list(t_UnaryExpr.parseString(f"+ 1", parseAll=True)), [ast.UnaryOp("+", 1)]))
-        self.assertTrue(ast.Compare(list(t_XPath.parseString(f"+ 1", parseAll=True)), [ast.UnaryOp("+", 1)]))
-        # self.assertEqual(list(t_UnaryExpr.parseString(f" - localname", parseAll=True)), ["-", QName(localname="localname")])
-        self.assertTrue(ast.Compare(list(t_UnaryExpr.parseString("+ (1 + 2)", parseAll=True)), [ast.UnaryOp("+", ast.BinOp(1, "+", 2))]))
+        l1 = list(t_UnaryExpr.parseString(f"+ 1", parseAll=True))
+        self.assertTrue(isinstance(l1[0], ast.UnaryOp))
+        self.assertTrue(isinstance(l1[0].op, ast.UAdd))
+        self.assertEqual(l1[0].operand, 1)
 
+        l2 = list(t_XPath.parseString(f"+ 1", parseAll=True))
+        self.assertTrue(isinstance(l2[0], ast.UnaryOp))
+        self.assertTrue(isinstance(l2[0].op, ast.UAdd))
+        self.assertEqual(l2[0].operand, 1)
 
+        l3 = list(t_UnaryExpr.parseString("+ (1 + 2)", parseAll=True))
+        self.assertTrue(isinstance(l3[0], ast.UnaryOp))
+        self.assertTrue(isinstance(l3[0].op, ast.UAdd))
 
+        self.assertTrue(isinstance(l3[0].operand, ast.BinOp))
+        self.assertEqual(l3[0].operand.left.value, 1)
+        self.assertTrue(isinstance(l3[0].operand.op, ast.Add))
+        self.assertEqual(l3[0].operand.right.value, 2)
+
+        l4 = list(XPath("+ sum(1,3)", parseAll=True).XPath)
+        self.assertTrue(isinstance(l4[0], ast.UnaryOp))
+        self.assertTrue(isinstance(l4[0].op, ast.UAdd))
         # The unary expression before a function should parse correctly
-        self.assertTrue(ast.Compare(list(XPath("+ sum(1,3)", parseAll=True).XPath), [ast.UnaryOp("+", Function(qname=QName(localname=sum), arguments=(1,3)))]))
-
-        # Additive Expressions
-        self.assertTrue(ast.Compare(list(t_AdditiveExpr.parseString("1 + 1", parseAll=True)), [1, operator.add, 1]))
+        self.assertEqual(l4[0].operand, Function(arguments=(1,3), qname=QName(prefix="fn", localname="sum")))
 
     def test_compile_arithmetic(self):
 
-        def wrapper(calc_str):
-            """
-            Haven't found a way to wrap the top expression into an ast.Expression.
-            This is an issue with parenthesized strings
-            """
-            xpath_query = list(t_XPath.parseString(calc_str, parseAll=True))[0]
-            xpath_expr = ast.Expression(xpath_query)
-            fixed = ast.fix_missing_locations(xpath_expr)
-            evaluation = eval(compile(fixed, "", "eval"))
-
-
-            return evaluation
-
-        self.assertEqual(wrapper("1 + 2"), 3)
-        self.assertEqual(wrapper("(3 - 5)"), -2)
-        self.assertEqual(wrapper("(4 + 3 - 5)"), 2)
-        self.assertEqual(wrapper("(4 + 3 * 5)"), 19)
-        self.assertEqual(wrapper("(4 + 3 * 5) - 9"), 10)
-        self.assertEqual(wrapper("(1 + 2 * 3 - 4 div 5 * 6 - 7) * (3 - 5)"), 9.600000000000001)
+        self.assertEqual(XPath("1 + 2").eval_expression(), 3)
+        self.assertEqual(XPath("(3 - 5)").eval_expression(), -2)
+        self.assertEqual(XPath("(4 + 3 - 5)").eval_expression(), 2)
+        self.assertEqual(XPath("(4 + 3 * 5)").eval_expression(), 19)
+        self.assertEqual(XPath("(4 + 3 * 5) - 9").eval_expression(), 10)
+        self.assertEqual(XPath("(1 + 2 * 3 - 4 div 5 * 6 - 7) * (3 - 5)").eval_expression(), 9.600000000000001)
