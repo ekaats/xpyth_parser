@@ -68,6 +68,12 @@ t_StringLiteral.setName("StringLiteral")
 t_Literal = t_NumericLiteral | t_StringLiteral
 t_Literal.setName("Literal")
 
+
+def catch_literal(v):
+    v_l = list(v)
+    return v
+t_Literal.setParseAction(catch_literal)
+
 t_Char = Regex(
     "[\u0009\u000a\u000d]|[\u0020-\ud7ff]|[\ue000-\ufffd]|[\U00010000-\U0010ffff]"
 )

@@ -16,7 +16,7 @@ class FunctionsOperatorsSequences(unittest.TestCase):
     def test_aggregate_functions(self):
 
         # Parse a string using Pyparsing
-        count = XPath.parseString("count(1,2,3)", parseAll=True)[0]
+        count = XPath("count(1,2,3)", parseAll=True).XPath[0]
 
         # This returns a Python function which can be used elsewhere
         # The function contains the QName which identifies the function, as well as the arguments
@@ -26,18 +26,18 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         #  (e.g., https://www.w3.org/TR/xpath-functions/#func-count)
         self.assertEqual(count.run(), 3)
 
-        avg = XPath.parseString("avg(1,4,2,3,12,3,6)", parseAll=True)[0]
+        avg = XPath("avg(1,4,2,3,12,3,6)", parseAll=True).XPath[0]
         self.assertEqual(avg, Avg(qname=QName(prefix="fn", localname="avg"), arguments=(1,4,2,3,12,3,6)))
         self.assertEqual(avg.run(), 4.428571428571429)
 
-        max = XPath.parseString("max(1,4,2,3,12,3,6)", parseAll=True)[0]
+        max = XPath("max(1,4,2,3,12,3,6)", parseAll=True).XPath[0]
         self.assertEqual(max, Max(qname=QName(prefix="fn", localname="max"), arguments=(1,4,2,3,12,3,6)))
         self.assertEqual(max.run(), 12)
 
-        min = XPath.parseString("min(4,2,3,12,3,6)", parseAll=True)[0]
+        min = XPath("min(4,2,3,12,3,6)", parseAll=True).XPath[0]
         self.assertEqual(min, Min(qname=QName(prefix="fn", localname="min"), arguments=(4,2,3,12,3,6)))
         self.assertEqual(min.run(), 2)
 
-        sum = XPath.parseString("sum(1,4,2,3,12,3,6)", parseAll=True)[0]
+        sum = XPath("sum(1,4,2,3,12,3,6)", parseAll=True).XPath[0]
         self.assertEqual(sum, Sum(qname=QName(prefix="fn", localname="sum"), arguments=(1,4,2,3,12,3,6)))
         self.assertEqual(sum.run(), 31)

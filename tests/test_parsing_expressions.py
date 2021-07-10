@@ -1,9 +1,11 @@
 import unittest
 import operator
 import ast
+import pyparsing
 from src.xpyth_parser.conversion.functions.generic import Function
 from src.xpyth_parser.conversion.qname import QName
 from src.xpyth_parser.grammar.expressions import t_PrimaryExpr, t_UnaryExpr, t_AdditiveExpr, t_XPath, t_ParenthesizedExpr
+from src.xpyth_parser.parse import XPath
 
 
 class ExpressionTests(unittest.TestCase):
@@ -79,9 +81,15 @@ class ExpressionTests(unittest.TestCase):
         """
         Test operative expressions
         """
-        self.assertEqual(list(t_UnaryExpr.parseString(f"+ 1", parseAll=True)), ["+", 1])
+        self.assertTrue(ast.Compare(list(t_UnaryExpr.parseString(f"+ 1", parseAll=True)), [ast.UnaryOp("+", 1)]))
+        self.assertTrue(ast.Compare(list(t_XPath.parseString(f"+ 1", parseAll=True)), [ast.UnaryOp("+", 1)]))
         # self.assertEqual(list(t_UnaryExpr.parseString(f" - localname", parseAll=True)), ["-", QName(localname="localname")])
-        self.assertEqual(list(t_UnaryExpr.parseString("+ ()", parseAll=True)), ["+", ()])
+        self.assertTrue(ast.Compare(list(t_UnaryExpr.parseString("+ (1 + 2)", parseAll=True)), [ast.UnaryOp("+", ast.BinOp(1, "+", 2))]))
+
+
+
+        # The unary expression before a function should parse correctly
+        self.assertTrue(ast.Compare(list(XPath("+ sum(1,3)", parseAll=True).XPath), [ast.UnaryOp("+", Function(qname=QName(localname=sum), arguments=(1,3)))]))
 
         # Additive Expressions
         self.assertTrue(ast.Compare(list(t_AdditiveExpr.parseString("1 + 1", parseAll=True)), [1, operator.add, 1]))

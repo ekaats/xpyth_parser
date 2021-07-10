@@ -18,7 +18,7 @@ from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Lit
 
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
-from ..conversion.calculation import get_ast
+from ..conversion.calculation import get_ast, get_unary_expr
 from ..conversion.function import get_function
 
 xpath_version = "3.1"
@@ -228,6 +228,7 @@ if xpath_version == "2.0":
     t_ValueExpr = t_PathExpr
     t_ValueExpr.setName("ValueExpr")
 elif xpath_version == "3.1":
+
     t_SimpleMapExpr = t_PathExpr + ZeroOrMore(Literal("!") + t_PathExpr)
     t_SimpleMapExpr.setName("SimpleMapExpr")
 
@@ -242,8 +243,8 @@ elif xpath_version == "3.1":
 # https://www.w3.org/TR/xpath-3/#id-arithmetic
 t_UnaryExpr = ZeroOrMore(Literal(" -") | Literal("+")) + t_ValueExpr
 
-# todo: Find how to deal with Unary expressions. They should probably be added to the ValueExpr they belong to.
 t_UnaryExpr.setName("UnaryExpr")
+t_UnaryExpr.setParseAction(get_unary_expr)
 
 
 if xpath_version == "2.0":
@@ -284,28 +285,6 @@ t_UnionExpr.setName("UnionExpr")
 
 """ Arithmetic Expressions """
 
-# arth_ops = {
-#     '+' : operator.add,
-#     '-' : operator.sub,
-#     '*' : operator.mul,
-#     'div' : operator.truediv,
-#     'mod' : operator.mod,
-# }
-arth_ops = {
-    '+' : ast.Add(),
-    '-' : ast.Sub(),
-    '*' : ast.Mult(),
-    'div' : ast.Div(),
-    'mod' : ast.Mod(),
-}
-
-
-def get_arth_op(v):
-    for op_str, op_func in arth_ops.items():
-        if op_str == v[0]:
-            return op_func
-    return v[0]
-
 tx_ArithmeticMultiplicativeSymbol = Literal("*") | Keyword("div") | Keyword("idiv") | Keyword("mod")
 
 t_ArithmeticAdditiveSymbol = Literal("+") | Literal("-")
@@ -326,31 +305,6 @@ t_RangeExpr.setName("RangeExpr")
 
 
 """ Comparison expressions """
-
-# comp_ops = {
-#     'eq' : operator.eq,
-#     'ne' : operator.ne,
-#     'lt' : operator.lt,
-#     'le' : operator.le,
-#     'gt' : operator.gt,
-#     'ge' : operator.ge,
-# }
-
-comp_ops = {
-    'eq' : ast.Eq(),
-    'ne' : ast.NotEq(),
-    'lt' : ast.Lt(),
-    'le' : ast.LtE(),
-    'gt' : ast.Gt(),
-    'ge' : ast.GtE(),
-}
-
-def get_comp_op(v):
-    for op_str, op_func in comp_ops.items():
-        if op_str == v[0]:
-            return op_func
-    return v[0]
-
 
 t_ValueComp = (
     Keyword("eq") | Keyword("ne") | Keyword("lt") | Keyword("le") | Keyword("gt") | Keyword("ge")
@@ -409,8 +363,16 @@ t_IfExpr = (
 t_IfExpr.setName("IfExpr")
 """ end Conditional Expression """
 
+t_SimpleLetBinding = Literal("$") + t_VarName + Keyword(":=") + t_ExprSingle
+t_SimpleLetBinding.setName("SimpleLetBinding")
+t_SimpleLetClause = Keyword("let") + t_SimpleLetBinding + ZeroOrMore(Literal(",") + t_SimpleLetBinding)
+t_SimpleLetClause.setName("SimpleLetClause")
+
+t_LetExpr = t_SimpleLetClause + Keyword("return") + t_ExprSingle
+t_LetExpr.setName("LetExpr")
+
 # Set ExprSingle with actual expressions
-t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr
+t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr | t_LetExpr
 
 t_XPath = t_Expr
 t_XPath.setName("XPath")
