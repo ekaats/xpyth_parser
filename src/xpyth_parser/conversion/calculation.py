@@ -152,3 +152,4 @@ def get_ast(v):
 
     else:
         print("Got more values than expected")
+        return v
