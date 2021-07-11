@@ -96,3 +96,43 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(XPath("(4 + 3 * 5)").eval_expression(), 19)
         self.assertEqual(XPath("(4 + 3 * 5) - 9").eval_expression(), 10)
         self.assertEqual(XPath("(1 + 2 * 3 - 4 div 5 * 6 - 7) * (3 - 5)").eval_expression(), 9.600000000000001)
+
+    def test_calculations_variables(self):
+        variable_map = {
+            "var_to_list": [1, 5, 3],
+            "var_to_value": 9,
+            "var_to_value_max": 5,
+            "var_to_value_min": 1,
+            "var_to_value_count": 3,
+            "var_to_value_avg": 3,
+        }
+        xpath_sum = XPath("+ sum($var_to_list) = $var_to_value", variable_map=variable_map)
+        # Loops though parsed resultes, resolves qnames from variable map
+        xpath_sum.resolve_qnames()
+        # Evaluate the expression
+        self.assertTrue(xpath_sum.eval_expression())
+
+        xpath_max = XPath("max($var_to_list) = $var_to_value_max", variable_map=variable_map)
+        # Loops though parsed resultes, resolves qnames from variable map
+        xpath_max.resolve_qnames()
+        # Evaluate the expression
+        self.assertTrue(xpath_max.eval_expression())
+
+        xpath_min = XPath("min($var_to_list) = $var_to_value_min", variable_map=variable_map)
+        # Loops though parsed resultes, resolves qnames from variable map
+        xpath_min.resolve_qnames()
+        # Evaluate the expression
+        self.assertTrue(xpath_min.eval_expression())
+
+        xpath_count = XPath("count($var_to_list) = $var_to_value_count", variable_map=variable_map)
+        # Loops though parsed resultes, resolves qnames from variable map
+        xpath_count.resolve_qnames()
+        # Evaluate the expression
+        self.assertTrue(xpath_count.eval_expression())
+
+        xpath_avg = XPath("avg($var_to_list) = $var_to_value_avg", variable_map=variable_map)
+        # Loops though parsed resultes, resolves qnames from variable map
+        xpath_avg.resolve_qnames()
+        # Evaluate the expression
+        self.assertTrue(xpath_avg.eval_expression())
+

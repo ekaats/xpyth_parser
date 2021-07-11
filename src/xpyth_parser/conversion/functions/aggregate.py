@@ -11,7 +11,17 @@ class Count(Function):
         super().__init__(arguments, qname, function_name="count")
 
     def run(self):
-        return len(self.arguments)
+
+        if self.cast_args:
+            return len(self.cast_args)
+
+        else:
+
+            try:
+                return len(self.arguments)
+            except TypeError:
+                raise Exception("Run self.cast_parameters(paramlist) first")
+
 
 
 class Avg(Function):
@@ -26,7 +36,15 @@ class Avg(Function):
         super().__init__(arguments, qname, function_name="count")
 
     def run(self):
-        return sum(self.arguments) / len(self.arguments)
+        if self.cast_args:
+            return sum(self.cast_args) / len(self.cast_args)
+
+        else:
+            try:
+                return sum(self.arguments) / len(self.arguments)
+            except TypeError:
+                raise Exception("Run self.cast_parameters(paramlist) first")
+
 
 class Max(Function):
     """
@@ -39,7 +57,15 @@ class Max(Function):
         super().__init__(arguments, qname, function_name="count")
 
     def run(self):
-        return max(self.arguments)
+        if self.cast_args:
+            return max(self.cast_args)
+
+        else:
+            try:
+                return max(self.arguments)
+            except TypeError:
+                raise Exception("Run self.cast_parameters(paramlist) first")
+
 
 
 class Min(Function):
@@ -53,7 +79,14 @@ class Min(Function):
         super().__init__(arguments, qname, function_name="count")
 
     def run(self):
-        return min(self.arguments)
+        if self.cast_args:
+            return min(self.cast_args)
+
+        else:
+            try:
+                return min(self.arguments)
+            except TypeError:
+                raise Exception("Run self.cast_parameters(paramlist) first")
 
 
 class Sum(Function):
@@ -66,24 +99,15 @@ class Sum(Function):
     def __init__(self, arguments, qname=None):
         super().__init__(arguments, qname, function_name="sum")
 
-    def cast_parameters(self, paramlist):
-        args = []
-        for i, param in enumerate(self.arguments):
-            if isinstance(param, Parameter):
-                param_value = param.resolve_parameter(paramlist=paramlist)
-                if isinstance(param_value, list):
-                    args.extend(param_value)
-                else:
-                    args.append(param_value)
-
-            elif isinstance(param, int):
-                args.append(param)
-            else:
-                print("Param type not understood")
-        self.arguments = args
-
     def run(self):
-        return sum(self.arguments)
+        if self.cast_args:
+            return sum(self.cast_args)
+
+        else:
+            try:
+                return sum(self.arguments)
+            except TypeError:
+                raise Exception("Run self.cast_parameters(paramlist) first")
 
     def get_ast(self, paramlist=None):
         for i, argument in enumerate(self.arguments):
@@ -93,15 +117,9 @@ class Sum(Function):
                 print(newarg)
 
 
-
-
 def get_aggregate_function(args, qname):
-    # qname = v[0]
-    # args = tuple(v[1:])
-
     # Function name is an EQName. This name corresponds with a (build-in) function.
     # If no function is known, create a generic Function() object.
-
 
     if qname.__repr__() == "fn:count":
         return Count(arguments=args, qname=qname)

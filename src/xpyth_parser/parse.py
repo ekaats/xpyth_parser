@@ -1,5 +1,6 @@
 import ast
 
+from .conversion.functions.generic import Function
 from .conversion.qname import Parameter
 from .grammar.expressions import t_XPath
 
@@ -16,6 +17,10 @@ class XPath:
         self.XPath = t_XPath.parseString(xpath_expr, parseAll=parseAll)
 
         self.variable_map = variable_map if variable_map else []
+
+        # If variable map is given, automatically resolve QNames
+        if variable_map:
+            self.resolve_qnames()
 
     def get_expression(self, expr_nr=0):
         """
@@ -34,30 +39,47 @@ class XPath:
 
         :return:
         """
+        # TODO: make this non desctuctive. We probably do not want to re-parse the entire grammar
+        #  for every instance
+        #  Maybe pickle parsed grammar before running
+        def resolve_fn(fn):
+            fn.cast_parameters(paramlist=self.variable_map)
+
+            # Then get the value by running the function
+            value = fn.run()
+
+            # Put the output value of the function into the AST as a number
+            return ast.Num(value)
 
         for parsed_expr in self.XPath:
+
             for node in ast.walk(parsed_expr):
                 if hasattr(node, "comparators"):
 
+                    '''Go through comparators and replace these with AST nodes based on the variable map'''
                     for i, comparator in enumerate(node.comparators):
                         if isinstance(comparator, Parameter):
                             # Recast the parameter based on information from the variable_map
                             comparator = comparator.get_ast_node(self.variable_map)
                             node.comparators[i] = comparator
 
-                        else:
-                            print("Unknown comparator")
 
-                elif hasattr(node, "operand"):
+                if hasattr(node, "operand"):
 
                     # First cast parameters based on variable map
-                    node.operand.cast_parameters(paramlist=self.variable_map)
+                    if isinstance(node.operand, Function):
+                        # Run the function and add the outcome as a value to the operand
+                        node.operand = resolve_fn(node.operand)
 
-                    # Then get the value by running the function
-                    value = node.operand.run()
 
-                    node.operand =ast.Num(value)
+                if hasattr(node, "left"):
+                    if isinstance(node.left, Function):
+                        node.left = resolve_fn(node.left)
 
+
+                if hasattr(node, "right"):
+                    if isinstance(node.right, Function):
+                        node.right = resolve_fn(node.right)
 
 
     def eval_expression(self):
