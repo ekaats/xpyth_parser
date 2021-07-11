@@ -39,9 +39,7 @@ class XPath:
 
         :return:
         """
-        # TODO: make this non desctuctive. We probably do not want to re-parse the entire grammar
-        #  for every instance
-        #  Maybe pickle parsed grammar before running
+        # TODO: Pickle grammar for reuse with different sets of variables
         def resolve_fn(fn):
             fn.cast_parameters(paramlist=self.variable_map)
 
