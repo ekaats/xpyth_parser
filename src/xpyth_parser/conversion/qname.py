@@ -36,6 +36,8 @@ class QName:
             return NotImplemented
         return self.localname == other.localname and self.prefix == other.prefix
 
+    def __hash__(self):
+        return hash(self.__repr__())
 
 class Parameter:
 
@@ -46,9 +48,10 @@ class Parameter:
     def __repr__(self):
         return self.qname.localname
 
-
-
     def __eq__(self, other):
         if not isinstance(other, Parameter):
             return NotImplemented
         return self.qname == other.qname
+
+    def __hash__(self):
+        return hash(self.__repr__())

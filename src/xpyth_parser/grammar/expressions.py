@@ -18,7 +18,7 @@ from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Lit
 
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
-from ..conversion.calculation import get_ast, get_unary_expr
+from ..conversion.calculation import get_ast, get_unary_expr, get_comparitive_expr
 from ..conversion.function import get_function
 
 xpath_version = "3.1"
@@ -321,11 +321,10 @@ t_GeneralComp.setName("GeneralComp")
 t_NodeComp = Word("is") | Word("<<") | Word(">>")
 t_NodeComp.setName("NodeComp")
 
-
-
 if xpath_version == "2.0":
     t_ComparisonExpr = t_RangeExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_RangeExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
+    t_ComparisonExpr.setParseAction(get_comparitive_expr)
 
 elif xpath_version == "3.1":
     t_StringConcatExpr = t_RangeExpr + ZeroOrMore(Word("||") + t_AdditiveExpr)
@@ -333,6 +332,7 @@ elif xpath_version == "3.1":
 
     t_ComparisonExpr = t_StringConcatExpr + Optional((t_ValueComp | t_GeneralComp | t_NodeComp) + t_StringConcatExpr)
     t_ComparisonExpr.setName("ComparisonExpr")
+    t_ComparisonExpr.setParseAction(get_comparitive_expr)
 
 
 """ end Comparison expresisons"""

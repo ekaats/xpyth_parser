@@ -26,3 +26,5 @@ class Function:
             return NotImplemented
         return self.arguments == other.arguments and self.qname == other.qname
 
+    def __hash__(self):
+        return hash(self.__repr__())

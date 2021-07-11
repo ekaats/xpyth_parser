@@ -83,9 +83,55 @@ def get_unary_expr(v):
 
     else:
         return v
+comp_expr = {
+    "=": ast.Eq(),
+    "!=": ast.NotEq(),
+    "<": ast.Lt(),
+    "<=": ast.LtE(),
+    ">": ast.Gt(),
+    ">=": ast.GtE()
+}
+
+def get_comparitive_expr(v):
+    val_list = list(v)
+
+    # Put all operators in one list
+    py_ops = []
+    for v in val_list:
+        if v in comp_expr.keys():
+
+            py_ops.append(comp_expr[v])
+
+
+    # # Only add a comparative expression if a comparator symbol has been found
+    if len(py_ops) > 0:
+        if isinstance(val_list[0], int):
+            py_left = ast.Num(val_list[0])
+        else:
+            py_left = val_list[0]
+    #
+    #     py_ops = []
+    #     for op in ops:
+    #         py_ops.append(comp_expr[op])
+
+        # Everything that isn't the first item or an op is considered a comperator
+        comps = [v for v in val_list[1:] if v not in comp_expr.keys()]
+        py_comps = []
+        for comp in comps:
+            if isinstance(comp, int):
+                py_comps.append(ast.Num(comp))
+            else:
+                py_comps.append(comp)
+
+
+        py_compare_expr = ast.Compare(left=py_left, ops=py_ops, comparators=py_comps)
+
+        return ast.fix_missing_locations(py_compare_expr)
+    else:
+        return v
 
 def get_ast(v):
-    # TODO: WRAP AST INTO OBJECT WITH FUNCTIONS TO COMPILE, EVAL, RESOLVE VARIABLES AND ADD EXPRESSION()
+
     l_values = list(v)
 
     # Loop though the equation and create a nested tree of BinOp objects
