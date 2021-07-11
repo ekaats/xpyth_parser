@@ -58,3 +58,17 @@ class Function:
 
     def __hash__(self):
         return hash(self.__repr__())
+
+class OrExpr:
+
+    def __init__(self,a , b):
+        self.op = "or"
+        self.a = a
+        self.b = b
+
+class AndExpr:
+
+    def __init__(self,a , b):
+        self.op = "and"
+        self.a = a
+        self.b = b

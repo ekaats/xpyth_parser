@@ -182,7 +182,7 @@ t_SequenceType = MatchFirst(
 )
 t_SequenceType.setName("SequenceType")
 
-t_TypeDeclaration = Literal("as") + t_SequenceType
+t_TypeDeclaration = Keyword("as") + t_SequenceType
 t_TypeDeclaration.setName("TypeDeclaration")
 
 t_Param = Literal("$") + t_EQName + Optional(t_TypeDeclaration)
@@ -335,29 +335,72 @@ elif xpath_version == "3.1":
     t_ComparisonExpr.setParseAction(get_comparitive_expr)
 
 
-""" end Comparison expresisons"""
+""" end Comparison expressions"""
+
+def get_and(v):
+    if len(v) > 1:
+        if v[1] == "and":
+            if isinstance(v[0], int):
+                a = ast.Num(v[0])
+            else:
+                a = v[0]
+
+            if isinstance(v[2], int):
+                b = ast.Num(v[2])
+            else:
+                b = v[2]
+
+            and_op = ast.BoolOp(op=ast.And(), values=[a, b])
+
+            # and_op = AndExpr(a=v[0], b=v[2])
+            return ast.fix_missing_locations(and_op)
+    return v
 
 
 """ Logical Expressions """
 t_AndExpr = t_ComparisonExpr + ZeroOrMore(Keyword("and") + t_ComparisonExpr)
 t_AndExpr.setName("AndExpr")
+t_AndExpr.setParseAction(get_and)
 
 
+class OrExpr:
+    pass
+
+
+def get_or(v):
+    if len(v) >1:
+        if v[1] == "or":
+            if isinstance(v[0], int):
+                a = ast.Num(v[0])
+            else:
+                a = v[0]
+
+            if isinstance(v[2], int):
+                b = ast.Num(v[2])
+            else:
+                b = v[2]
+
+            or_op = ast.BoolOp(op=ast.Or(), values=[a, b])
+            # or_op = OrExpr(a=v[0], b=v[2])
+            return ast.fix_missing_locations(or_op)
+    return v
+# todo: Somehow "or" does not get to be parsed as an OrExrp, but "OR" is fine. The "and" Expression also works fine.
 t_OrExpr = t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr)
 t_OrExpr.setName("OrExpr")
+t_OrExpr.setParseAction(get_or)
 
 """ end Logical Expressions """
 
 
 """ Conditional Expression """
 t_IfExpr = (
-    Literal("if")
+    Keyword("if")
     + l_par_l
     + t_Expr
     + l_par_r
-    + Literal("then")
+    + Keyword("then")
     + t_ExprSingle
-    + Literal("else")
+    + Keyword("else")
     + t_ExprSingle
 )
 t_IfExpr.setName("IfExpr")
