@@ -15,6 +15,14 @@ class Function:
         """
         return NotImplemented
 
+    def get_ast(self):
+        """
+        Returns a Python AST object
+
+        :return:
+        """
+        return NotImplemented
+
     def __repr__(self):
         if self.qname:
             return f"Function: {self.qname} ({self.arguments})"

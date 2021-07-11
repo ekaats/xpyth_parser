@@ -1,3 +1,4 @@
+import ast
 
 def qname_from_parse_results(a, string):
     """
@@ -44,6 +45,20 @@ class Parameter:
     def __init__(self, qname, type_declaration=None):
         self.qname = qname
         self.type_declaration = type_declaration
+
+    def get_ast_node(self, paramlist):
+
+        value = paramlist[self.qname.__str__()]
+        if isinstance(value, int):
+            return ast.Num(value)
+        elif isinstance(value, list):
+            val_list = [ast.Num(v) for v in value]
+            return ast.List(val_list)
+        else:
+            print("Variable map object type not understood")
+
+    def resolve_parameter(self, paramlist):
+        return paramlist[self.qname.__str__()]
 
     def __repr__(self):
         return self.qname.localname
