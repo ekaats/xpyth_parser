@@ -59,6 +59,17 @@ class XPath:
                             comparator = comparator.get_ast_node(self.variable_map)
                             node.comparators[i] = comparator
 
+                if hasattr(node, "values"):
+
+                    for i, value in enumerate(node.values):
+                        if isinstance(value, Parameter):
+                            # Recast the parameter based on information from the variable_map
+                            value = value.get_ast_node(self.variable_map)
+                            node.values[i] = value
+
+                        elif isinstance(value, Function):
+                            node.values[i] = resolve_fn(value)
+
                 if hasattr(node, "operand"):
 
                     # First cast parameters based on variable map
@@ -73,6 +84,8 @@ class XPath:
                 if hasattr(node, "right"):
                     if isinstance(node.right, Function):
                         node.right = resolve_fn(node.right)
+
+
 
     def eval_expression(self):
         """

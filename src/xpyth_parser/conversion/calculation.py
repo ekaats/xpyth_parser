@@ -71,7 +71,7 @@ def get_unary_expr(v):
     :return:
     """
     val_list = list(v)
-    if len(val_list) > 1:
+    if len(val_list) > 1 and val_list[0] in unary_ops.keys():
 
         # Only give back a unaryExpr if there is an actual operator being given
         op = unary_ops[val_list[0]]
@@ -152,5 +152,5 @@ def get_ast(v):
         return l_values[0]
 
     else:
-        print("Got more values than expected")
+        # print("Got more values than expected")
         return v
