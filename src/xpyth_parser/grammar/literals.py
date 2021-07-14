@@ -38,11 +38,13 @@ t_DecimalLiteral.addParseAction(str_to_float)
 t_DecimalLiteral.setName("DecimalLiteral")
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-DoubleLiteral
-t_DoubleLiteral = Combine(l_dot + t_IntegerLiteral) | Combine(
-    t_IntegerLiteral + Optional(l_dot + Optional(t_IntegerLiteral))
-) + (Literal("e") | Literal("E")) + Optional(
-    Literal("+") | Literal("-")
-) + t_IntegerLiteral
+t_DoubleLiteral = (
+    Combine(l_dot + t_IntegerLiteral)
+    | Combine(t_IntegerLiteral + Optional(l_dot + Optional(t_IntegerLiteral)))
+    + (Literal("e") | Literal("E"))
+    + Optional(Literal("+") | Literal("-"))
+    + t_IntegerLiteral
+)
 t_DoubleLiteral.addParseAction(str_to_float)
 t_DoubleLiteral.setName("DoubleLiteral")
 
@@ -61,7 +63,10 @@ t_EscapeQuot.setName("EscapedQuot")
 t_EscapeApos = Literal("''")
 t_EscapeApos.setName("EscapedApos")
 # https://www.w3.org/TR/xpath20/#doc-xpath-StringLiteral
-t_StringLiteral = Combine((Suppress('"') + ZeroOrMore(t_EscapeQuot | Regex('[^"]')) + Suppress('"')) | Combine(Suppress("'") + ZeroOrMore(t_EscapeApos | Regex("[^']")) + Suppress("'")))
+t_StringLiteral = Combine(
+    (Suppress('"') + ZeroOrMore(t_EscapeQuot | Regex('[^"]')) + Suppress('"'))
+    | Combine(Suppress("'") + ZeroOrMore(t_EscapeApos | Regex("[^']")) + Suppress("'"))
+)
 t_StringLiteral.setName("StringLiteral")
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-Literal
@@ -72,6 +77,8 @@ t_Literal.setName("Literal")
 def catch_literal(v):
     v_l = list(v)
     return v
+
+
 t_Literal.setParseAction(catch_literal)
 
 t_Char = Regex(
@@ -101,3 +108,4 @@ t_Name.setName("Name")
 # https://www.w3.org/TR/REC-xml-names/#NT-NCName
 t_NCName = t_Name
 t_NCName.setName("NCName")
+

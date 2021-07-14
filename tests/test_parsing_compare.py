@@ -4,7 +4,6 @@ from src.xpyth_parser.parse import XPath
 
 
 class ComparisonTests(unittest.TestCase):
-
     def test_general_comparisons(self):
         """
         Test operative expressions
@@ -27,4 +26,3 @@ class ComparisonTests(unittest.TestCase):
         self.assertTrue(XPath(f"(1 + 2) != (1 + 1)").eval_expression())
         self.assertTrue(XPath(f"2 = (1 + 1)").eval_expression())
         self.assertTrue(XPath(f"(1 + 2) = (2 + 1)").eval_expression())
-

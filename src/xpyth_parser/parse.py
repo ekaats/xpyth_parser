@@ -4,15 +4,13 @@ from .conversion.functions.generic import Function
 from .conversion.qname import Parameter
 from .grammar.expressions import t_XPath
 
-class ResolveQnames(ast.NodeTransformer):
 
+class ResolveQnames(ast.NodeTransformer):
     def visit_QName(self, node):
         print("")
 
 
-
 class XPath:
-
     def __init__(self, xpath_expr, parseAll=True, variable_map=None):
         self.XPath = t_XPath.parseString(xpath_expr, parseAll=parseAll)
 
@@ -54,13 +52,12 @@ class XPath:
             for node in ast.walk(parsed_expr):
                 if hasattr(node, "comparators"):
 
-                    '''Go through comparators and replace these with AST nodes based on the variable map'''
+                    """Go through comparators and replace these with AST nodes based on the variable map"""
                     for i, comparator in enumerate(node.comparators):
                         if isinstance(comparator, Parameter):
                             # Recast the parameter based on information from the variable_map
                             comparator = comparator.get_ast_node(self.variable_map)
                             node.comparators[i] = comparator
-
 
                 if hasattr(node, "operand"):
 
@@ -69,16 +66,13 @@ class XPath:
                         # Run the function and add the outcome as a value to the operand
                         node.operand = resolve_fn(node.operand)
 
-
                 if hasattr(node, "left"):
                     if isinstance(node.left, Function):
                         node.left = resolve_fn(node.left)
 
-
                 if hasattr(node, "right"):
                     if isinstance(node.right, Function):
                         node.right = resolve_fn(node.right)
-
 
     def eval_expression(self):
         """

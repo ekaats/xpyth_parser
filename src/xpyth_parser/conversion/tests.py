@@ -1,7 +1,4 @@
-
-
 class Test:
-
     def __init__(self, test_type, test=None):
 
         self.test_type = test_type
@@ -38,6 +35,7 @@ def documentTest(v):
 
     return Test(test_type="document-node", test=subtest)
 
+
 def elementTest(v):
     """
     An ElementTest is used to match an element node by its name and/or type annotation.
@@ -58,8 +56,10 @@ def elementTest(v):
 
     return Test(test_type="element", test=test)
 
+
 def attributeTest(v):
     pass
+
 
 def schemaElementTest(v):
     """
@@ -74,6 +74,7 @@ def schemaElementTest(v):
 
     return Test(test_type="schema-element", test=test)
 
+
 def schemaAttributeTest(v):
     """
     https://www.w3.org/TR/xpath-31/#id-schema-attribute-test
@@ -83,6 +84,7 @@ def schemaAttributeTest(v):
     test = v[1]
 
     return Test(test_type="schema-attribute", test=test)
+
 
 def processingInstructionTest(v):
     """
@@ -98,11 +100,14 @@ def processingInstructionTest(v):
 
     return Test(test_type="processing-instruction", test=test)
 
+
 def commentTest(v):
     return Test(test_type="comment")
 
+
 def textTest(v):
     return Test(test_type="text")
+
 
 def anyKindTest(v):
     return Test(test_type="node")

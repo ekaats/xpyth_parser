@@ -2,11 +2,11 @@ import ast
 import operator
 
 arth_ops = {
-    '+' : ast.Add(),
-    '-' : ast.Sub(),
-    '*' : ast.Mult(),
-    'div' : ast.Div(),
-    'mod' : ast.Mod(),
+    "+": ast.Add(),
+    "-": ast.Sub(),
+    "*": ast.Mult(),
+    "div": ast.Div(),
+    "mod": ast.Mod(),
 }
 
 
@@ -53,11 +53,13 @@ def get_nodes(l_values):
             newlist = add_node(i=i, l_values=l_values)
             return get_nodes(newlist)
 
+
 # Not | UAdd | USub | Invert
 unary_ops = {
-        '+': ast.UAdd(),
-        '-': ast.USub(),
-        }
+    "+": ast.UAdd(),
+    "-": ast.USub(),
+}
+
 
 def get_unary_expr(v):
     """
@@ -79,18 +81,19 @@ def get_unary_expr(v):
         unary_op = ast.UnaryOp(op, val)
         return unary_op
 
-
-
     else:
         return v
+
+
 comp_expr = {
     "=": ast.Eq(),
     "!=": ast.NotEq(),
     "<": ast.Lt(),
     "<=": ast.LtE(),
     ">": ast.Gt(),
-    ">=": ast.GtE()
+    ">=": ast.GtE(),
 }
+
 
 def get_comparitive_expr(v):
     val_list = list(v)
@@ -102,17 +105,16 @@ def get_comparitive_expr(v):
 
             py_ops.append(comp_expr[v])
 
-
     # # Only add a comparative expression if a comparator symbol has been found
     if len(py_ops) > 0:
         if isinstance(val_list[0], int):
             py_left = ast.Num(val_list[0])
         else:
             py_left = val_list[0]
-    #
-    #     py_ops = []
-    #     for op in ops:
-    #         py_ops.append(comp_expr[op])
+        #
+        #     py_ops = []
+        #     for op in ops:
+        #         py_ops.append(comp_expr[op])
 
         # Everything that isn't the first item or an op is considered a comperator
         comps = [v for v in val_list[1:] if v not in comp_expr.keys()]
@@ -123,12 +125,12 @@ def get_comparitive_expr(v):
             else:
                 py_comps.append(comp)
 
-
         py_compare_expr = ast.Compare(left=py_left, ops=py_ops, comparators=py_comps)
 
         return ast.fix_missing_locations(py_compare_expr)
     else:
         return v
+
 
 def get_ast(v):
 
@@ -143,7 +145,6 @@ def get_ast(v):
         # We expect there to be only one value, which should be a BinOp.
         l_values = l_values[0]
         return l_values
-
 
     elif isinstance(l_values[0], ast.Expression):
         # If the function gets called recursively, it could happen we already created the full expression.

@@ -2,7 +2,6 @@ from src.xpyth_parser.conversion.qname import Parameter
 
 
 class Function:
-
     def __init__(self, arguments, qname, function_name=None):
         self.arguments = arguments
         self.qname = qname
@@ -59,16 +58,16 @@ class Function:
     def __hash__(self):
         return hash(self.__repr__())
 
-class OrExpr:
 
-    def __init__(self,a , b):
+class OrExpr:
+    def __init__(self, a, b):
         self.op = "or"
         self.a = a
         self.b = b
 
-class AndExpr:
 
-    def __init__(self,a , b):
+class AndExpr:
+    def __init__(self, a, b):
         self.op = "and"
         self.a = a
         self.b = b

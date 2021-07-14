@@ -1,13 +1,27 @@
 from pyparsing import (
     Optional,
-    Word,
-    Keyword, Literal,
+    Keyword,
+    Literal,
 )
 
 from .literals import l_par_l, l_par_r, t_NCName, t_StringLiteral
-from .qualified_names import t_TypeName, t_ElementName, t_AttributeName, t_QName, t_Wildcard
-from ..conversion.tests import elementTest, schemaElementTest, documentTest, schemaAttributeTest, commentTest, textTest, \
-    anyKindTest, processingInstructionTest
+from .qualified_names import (
+    t_TypeName,
+    t_ElementName,
+    t_AttributeName,
+    t_QName,
+    t_Wildcard,
+)
+from ..conversion.tests import (
+    elementTest,
+    schemaElementTest,
+    documentTest,
+    schemaAttributeTest,
+    commentTest,
+    textTest,
+    anyKindTest,
+    processingInstructionTest,
+)
 
 """
 TESTS
@@ -29,12 +43,12 @@ t_ElementTest.setParseAction(elementTest)
 t_ElementDeclaration = t_ElementName
 t_ElementDeclaration.setName("ElementDeclaration")
 
-t_SchemaElementTest = Word("schema-element") + l_par_l + t_ElementDeclaration + l_par_r
+t_SchemaElementTest = Keyword("schema-element") + l_par_l + t_ElementDeclaration + l_par_r
 t_SchemaElementTest.setParseAction(schemaElementTest)
 t_SchemaElementTest.setName("schema-element")
 
 t_DocumentTest = (
-    Word("document-node")
+    Keyword("document-node")
     + l_par_l
     + Optional(t_ElementTest | t_SchemaElementTest)
     + l_par_r
@@ -46,7 +60,7 @@ t_AttribNameOrWildcard = t_AttributeName | "*"
 t_AttribNameOrWildcard.setName("AttribNameOrWildcard")
 
 t_AttributeTest = (
-    Word("attribute")
+    Keyword("attribute")
     + l_par_l
     + Optional(t_AttribNameOrWildcard + Optional("," + t_TypeName))
     + l_par_r
@@ -56,24 +70,29 @@ t_AttributeTest.setName("AttributeTest")
 t_AttributeDeclaration = t_AttributeName
 t_AttributeDeclaration.setName("AttributeDeclaration")
 
-t_SchemaAttributeTest = Word("schema-attribute") + l_par_l + t_AttributeDeclaration + l_par_r
+t_SchemaAttributeTest = (
+    Keyword("schema-attribute") + l_par_l + t_AttributeDeclaration + l_par_r
+)
 t_SchemaAttributeTest.setParseAction(schemaAttributeTest)
 t_SchemaAttributeTest.setName("SchemaAttributeTest")
 
-t_CommentTest = Word("comment") + l_par_l + l_par_r
+t_CommentTest = Keyword("comment") + l_par_l + l_par_r
 t_CommentTest.setParseAction(commentTest)
 t_CommentTest.setName("comment")
 
-t_TextTest = Word("text") + l_par_l + l_par_r
+t_TextTest = Keyword("text") + l_par_l + l_par_r
 t_TextTest.setParseAction(textTest)
 t_TextTest.setName("TextTest")
 
-t_AnyKindTest = Word("node") + l_par_l + l_par_r
+t_AnyKindTest = Keyword("node") + l_par_l + l_par_r
 t_AnyKindTest.setParseAction(anyKindTest)
 t_AnyKindTest.setName("AnyKindTest")
 
 t_PITest = (
-    Word("processing-instruction") + l_par_l + Optional(t_NCName | t_StringLiteral) + l_par_r
+    Keyword("processing-instruction")
+    + l_par_l
+    + Optional(t_NCName | t_StringLiteral)
+    + l_par_r
 )
 t_PITest.setParseAction(processingInstructionTest)
 t_PITest.setName("Processing-InstructionTest")
@@ -96,4 +115,3 @@ t_NameTest.setName("NameTest")
 
 t_NodeTest = t_KindTest | t_NameTest
 t_NodeTest.setName("NodeTest")
-

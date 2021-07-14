@@ -1,5 +1,6 @@
 import ast
 
+
 def qname_from_parse_results(a, string):
     """
     Return a Qname object
@@ -13,6 +14,7 @@ def qname_from_parse_results(a, string):
     else:
         return QName(localname=string[0])
 
+
 def get_variable(v):
     if len(v) > 1:
         return Parameter(qname=v[0], type_declaration=v[1])
@@ -20,9 +22,7 @@ def get_variable(v):
         return Parameter(qname=v[0])
 
 
-
 class QName:
-
     def __init__(self, localname, prefix=None):
         self.localname = localname
         self.prefix = prefix
@@ -40,8 +40,8 @@ class QName:
     def __hash__(self):
         return hash(self.__repr__())
 
-class Parameter:
 
+class Parameter:
     def __init__(self, qname, type_declaration=None):
         self.qname = qname
         self.type_declaration = type_declaration

@@ -23,7 +23,6 @@ class Count(Function):
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
 
-
 class Avg(Function):
     """
     Returns the average of the values in the input sequence $arg, that is,
@@ -65,7 +64,6 @@ class Max(Function):
                 return max(self.arguments)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
-
 
 
 class Min(Function):
@@ -133,4 +131,3 @@ def get_aggregate_function(args, qname):
         return Sum(arguments=args, qname=qname)
     else:
         return None
-
