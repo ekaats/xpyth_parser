@@ -60,14 +60,19 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(list(t_PrimaryExpr.parseString(".", parseAll=True)), ["."])
 
         # Function Call
-        self.assertEqual(
-            list(t_PrimaryExpr.parseString("my:function(1,2)", parseAll=True)),
-            [
-                Function(
-                    qname=QName(prefix="my", localname="function"), arguments=(1, 2)
-                )
-            ],
-        )
+        l6 = list(t_PrimaryExpr.parseString("my:function(1,2)", parseAll=True))
+        self.assertTrue(isinstance(l6[0], Function))
+        self.assertEqual(l6[0].qname, QName(prefix="my", localname="function"))
+        self.assertEqual(l6[0].arguments[0].value, 1)
+        self.assertEqual(l6[0].arguments[1].value, 2)
+
+                #
+        #     [
+
+        #             qname=, arguments=(1, 2)
+        #         )
+        #     ],
+        # )
 
     def test_operators(self):
         """
@@ -76,12 +81,12 @@ class ExpressionTests(unittest.TestCase):
         l1 = list(t_UnaryExpr.parseString(f"+ 1", parseAll=True))
         self.assertTrue(isinstance(l1[0], ast.UnaryOp))
         self.assertTrue(isinstance(l1[0].op, ast.UAdd))
-        self.assertEqual(l1[0].operand, 1)
+        self.assertEqual(l1[0].operand.value, 1)
 
         l2 = list(t_XPath.parseString(f"+ 1", parseAll=True))
         self.assertTrue(isinstance(l2[0], ast.UnaryOp))
         self.assertTrue(isinstance(l2[0].op, ast.UAdd))
-        self.assertEqual(l2[0].operand, 1)
+        self.assertEqual(l2[0].operand.value, 1)
 
         l3 = list(t_UnaryExpr.parseString("+ (1 + 2)", parseAll=True))
         self.assertTrue(isinstance(l3[0], ast.UnaryOp))
@@ -96,10 +101,11 @@ class ExpressionTests(unittest.TestCase):
         self.assertTrue(isinstance(l4[0], ast.UnaryOp))
         self.assertTrue(isinstance(l4[0].op, ast.UAdd))
         # The unary expression before a function should parse correctly
-        self.assertEqual(
-            l4[0].operand,
-            Function(arguments=(1, 3), qname=QName(prefix="fn", localname="sum")),
-        )
+
+        self.assertTrue(isinstance(l4[0].operand, Function))
+        self.assertEqual(l4[0].operand.qname, QName(prefix="fn", localname="sum"))
+        self.assertEqual(l4[0].operand.arguments[0].value, 1)
+        self.assertEqual(l4[0].operand.arguments[1].value, 3)
 
     def test_compile_arithmetic(self):
 

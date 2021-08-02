@@ -22,7 +22,7 @@ class PathTraversalTests(unittest.TestCase):
         """
 
         self.assertEqual(list(t_PredicateList.parseString("", parseAll=True)), [])
-        self.assertEqual(list(t_PredicateList.parseString("[1]", parseAll=True)), [1])
+        self.assertEqual(list(t_PredicateList.parseString("[1]", parseAll=True))[0].value, 1)
 
     def test_path_expressions(self):
         """
