@@ -1,3 +1,5 @@
+import ast
+
 from .generic import Function
 from ..qname import Parameter
 
@@ -23,7 +25,6 @@ class Count(Function):
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
 
-
 class Avg(Function):
     """
     Returns the average of the values in the input sequence $arg, that is,
@@ -36,12 +37,21 @@ class Avg(Function):
         super().__init__(arguments, qname, function_name="count")
 
     def run(self):
+        # Convert ast.Nums back into
+
         if self.cast_args:
             return sum(self.cast_args) / len(self.cast_args)
 
         else:
             try:
-                return sum(self.arguments) / len(self.arguments)
+                # Cast args into values
+                args = []
+                for arg in self.arguments:
+                    if isinstance(arg, ast.Constant):
+                        args.append(arg.value)
+                    else:
+                        args.append(arg)
+                return sum(args) / len(args)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
@@ -62,10 +72,16 @@ class Max(Function):
 
         else:
             try:
-                return max(self.arguments)
+                # Cast args into values
+                args = []
+                for arg in self.arguments:
+                    if isinstance(arg, ast.Constant):
+                        args.append(arg.value)
+                    else:
+                        args.append(arg)
+                return max(args)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
-
 
 
 class Min(Function):
@@ -84,7 +100,14 @@ class Min(Function):
 
         else:
             try:
-                return min(self.arguments)
+                # Cast args into values
+                args = []
+                for arg in self.arguments:
+                    if isinstance(arg, ast.Constant):
+                        args.append(arg.value)
+                    else:
+                        args.append(arg)
+                return min(args)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
@@ -105,7 +128,14 @@ class Sum(Function):
 
         else:
             try:
-                return sum(self.arguments)
+                # Cast args into values
+                args = []
+                for arg in self.arguments:
+                    if isinstance(arg, ast.Constant):
+                        args.append(arg.value)
+                    else:
+                        args.append(arg)
+                return sum(args)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
@@ -133,4 +163,3 @@ def get_aggregate_function(args, qname):
         return Sum(arguments=args, qname=qname)
     else:
         return None
-

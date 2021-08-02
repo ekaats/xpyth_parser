@@ -3,7 +3,7 @@ from pyparsing import (
     Regex,
     Optional,
     ZeroOrMore,
-     Suppress,
+    Suppress,
 )
 
 from .literals import t_NCName
@@ -31,7 +31,9 @@ t_QName = t_PrefixedName | t_UnprefixedName
 t_QName.setName("Qname")
 t_QName.setParseAction(qname_from_parse_results)
 
-t_BracedURILiteral = Literal("Q") + Literal("{") + ZeroOrMore(Regex("[^{}]")) + Literal("}")
+t_BracedURILiteral = (
+    Literal("Q") + Literal("{") + ZeroOrMore(Regex("[^{}]")) + Literal("}")
+)
 t_BracedURILiteral.setName("BracedURILiteral")
 
 t_URIQualifiedName = t_BracedURILiteral + t_NCName

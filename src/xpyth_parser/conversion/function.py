@@ -1,5 +1,5 @@
 from .functions.aggregate import get_aggregate_function
-from .functions.generic import Function
+from .functions.generic import Function, Not, Empty
 
 
 def get_function(v):
@@ -16,6 +16,13 @@ def get_function(v):
     if qname.localname in ["count", "avg", "max", "min", "sum"]:
         return get_aggregate_function(qname=qname, args=args)
 
+    elif qname.localname in ["empty", "not"]:
+
+        if qname.__repr__() == "fn:not":
+            return Not(arguments=args, qname=qname)
+        elif qname.__repr__() == "fn:empty":
+            return Empty(arguments=args, qname=qname)
     else:
         # Return generic function if the function name is not found
         return Function(arguments=args, qname=qname)
+
