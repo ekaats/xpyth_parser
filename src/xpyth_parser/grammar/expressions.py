@@ -72,26 +72,25 @@ t_Expr.setName("Expr")
 t_ContextItemExpr = l_dot
 t_ContextItemExpr.setName("ContextItemExpr")
 
-
 l_Forward_keywords = (
-    Literal("child")
-    | Literal("self")
-    | Literal("descendant-or-self")
-    | Literal("following-sibling")
-    | Literal("following")
-    | Literal("attribute")
-    | Literal("namespace")
-    | Literal("descendant")
+    Keyword("child")
+    | Keyword("self")
+    | Keyword("descendant-or-self")
+    | Keyword("following-sibling")
+    | Keyword("following")
+    | Keyword("attribute")
+    | Keyword("namespace")
+    | Keyword("descendant")
 )
 t_ForwardAxis = l_Forward_keywords + Literal("::")
 t_ForwardAxis.setName("ForwardAxis")
 
 l_Reverse_keywords = (
-    Literal("preceding-sibling")
-    | Literal("preceding")
-    | Literal("ancestor-or-self")
-    | Literal("parent")
-    | Literal("ancestor")
+    Keyword("preceding-sibling")
+    | Keyword("preceding")
+    | Keyword("ancestor-or-self")
+    | Keyword("parent")
+    | Keyword("ancestor")
 )
 t_ReverseAxis = l_Reverse_keywords + Literal("::")
 t_ReverseAxis.setName("ReverseAxis")
@@ -174,17 +173,80 @@ elif xpath_version == "3.1":
     t_StepExpr = t_PostfixExpr | t_AxisStep
     t_StepExpr.setName("StepExpr")
 
+
+tx_SinglePathExpr = MatchFirst(Literal("//") | Literal("/")) + t_StepExpr
+
+class Axis:
+
+    def __init__(self, axis, step):
+
+        self.axis = axis
+        self.step = step
+
+    def __repr__(self):
+        return f"axis: {self.axis}, step:{self.step}"
+
+def test_single_path_expr(v):
+
+    if len(v) == 2:
+        return Axis(axis=v[0], step=v[1])
+    else:
+        print("")
+        return v
+
+tx_SinglePathExpr.setParseAction(test_single_path_expr)
+
 t_RelativePathExpr = t_StepExpr + ZeroOrMore(
-    (Literal("/") | Literal("//")) + t_StepExpr
+    tx_SinglePathExpr
 )
-t_RelativePathExpr.setName("RelateivePathExpr")
+t_RelativePathExpr.setName("RelativePathExpr")
+
+
 
 t_PathExpr = (
-    (Literal("/") + Optional(t_RelativePathExpr))
-    | (Literal("//") + t_RelativePathExpr)
+    (Literal("//") + t_RelativePathExpr)
+    | (Literal("/") + Optional(t_RelativePathExpr))
     | t_RelativePathExpr
 )
 t_PathExpr.setName("PathExpr")
+
+class PathExpression:
+
+    def __init__(self, steps):
+
+        if isinstance(steps, list):
+            self.steps = steps
+        else:
+            self.steps = [steps]
+
+def test_path_expr(v):
+    if v[0] == "/" and len(v) == 1:
+        # https://www.w3.org/TR/xpath-3/#parse-note-leading-lone-slash
+        return "/"
+    elif v[0] in ["/", "//"]:
+        first_step = Axis(axis=v[0], step=v[1])
+        if len(v) > 1:
+
+            steps = list(v[2:])
+        else:
+            steps = []
+        steps.insert(0, first_step)
+
+        return PathExpression(steps=steps)
+    else:
+        # todo: probably ok to not do anything with this, or wrap in path expression anyway?
+
+        return v
+
+t_PathExpr.setParseAction(test_path_expr)
+
+
+
+    # axis = {
+    #     "/": "(fn:root(self::node()) treat as document-node())/",
+    #     "//": "(fn:root(self::node()) treat as document-node())/descendant-or-self::node()/"
+    # }
+
 
 
 """ Primary Expressions"""
@@ -364,12 +426,12 @@ t_ValueComp.setName("ValueComp")
 
 # Todo: Cast GeneralComp in to pythonic operators. Could we use the same as for ValueComp?
 t_GeneralComp = (
-    Keyword("=")
-    | Keyword("!=")
-    | Keyword("<")
-    | Keyword("<=")
-    | Keyword(">")
-    | Keyword(">=")
+    Literal("=")
+    | Literal("!=")
+    | Literal("<")
+    | Literal("<=")
+    | Literal(">")
+    | Literal(">=")
 )
 t_GeneralComp.setName("GeneralComp")
 
@@ -401,15 +463,15 @@ elif xpath_version == "3.1":
 def get_and(v):
     if len(v) > 1:
         if v[1] == "and":
-            if isinstance(v[0], int):
-                a = ast.Num(v[0])
-            else:
-                a = v[0]
+            # if isinstance(v[0], int):
+            #     a = ast.Num(v[0])
+            # else:
+            a = v[0]
 
-            if isinstance(v[2], int):
-                b = ast.Num(v[2])
-            else:
-                b = v[2]
+            # if isinstance(v[2], int):
+            #     b = ast.Num(v[2])
+            # else:
+            b = v[2]
 
             and_op = ast.BoolOp(op=ast.And(), values=[a, b])
 
@@ -427,10 +489,10 @@ t_AndExpr.setParseAction(get_and)
 def get_or(v):
     if len(v) > 1:
         if v[1] in ["OR", "or"]:
-            if isinstance(v[0], int):
-                a = ast.Num(v[0])
-            else:
-                a = v[0]
+            # if isinstance(v[0], int):
+            #     a = ast.Num(v[0])
+            # else:
+            a = v[0]
 
             if isinstance(v[2], int):
                 b = ast.Num(v[2])
@@ -450,17 +512,26 @@ t_OrExpr.setParseAction(get_or)
 
 """ Conditional Expression """
 t_IfExpr = (
-    Keyword("if")
+    Literal("if")
     + l_par_l
     + t_Expr
     + l_par_r
-    + Keyword("then")
+    + Literal("then")
     + t_ExprSingle
-    + Keyword("else")
+    + Literal("else")
     + t_ExprSingle
 )
+
+
 t_IfExpr.setName("IfExpr")
+
 """ end Conditional Expression """
+def if_thingy(v):
+    print("")
+    return v
+
+t_IfExpr.setParseAction(if_thingy)
+
 
 t_SimpleLetBinding = Literal("$") + t_VarName + Keyword(":=") + t_ExprSingle
 t_SimpleLetBinding.setName("SimpleLetBinding")
