@@ -1,3 +1,5 @@
+import ast
+
 from pyparsing import (
     Combine,
     Literal,
@@ -29,13 +31,11 @@ https://www.w3.org/TR/xpath20/#id-primary-expressions
 # https://www.w3.org/TR/xpath20/#doc-xpath-IntegerLiteral
 t_IntegerLiteral = Word(nums)
 t_IntegerLiteral.addParseAction(str_to_int)
-t_IntegerLiteral.setName("IntegerLiteral")
 
 t_DecimalLiteral = Combine(l_dot + t_IntegerLiteral) | Combine(
     t_IntegerLiteral + l_dot + Optional(t_IntegerLiteral)
 )
 t_DecimalLiteral.addParseAction(str_to_float)
-t_DecimalLiteral.setName("DecimalLiteral")
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-DoubleLiteral
 t_DoubleLiteral = (
@@ -46,17 +46,23 @@ t_DoubleLiteral = (
     + t_IntegerLiteral
 )
 t_DoubleLiteral.addParseAction(str_to_float)
-t_DoubleLiteral.setName("DoubleLiteral")
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-NumericLiteral
 # Order of the NumericLiteral has been changed compared to spec.
 # I think this is necessary for the PEG based PyParsing library to correctly find the type
 # https://en.wikipedia.org/wiki/Parsing_expression_grammar
 
+def get_numeric_literal_ast(v):
+    # unparsed_num = v[0]
+
+    ast_num = ast.Num(v[0])
+    return ast_num
+
 # If IntegerLiteral is checked first, a partial match would be found
 t_NumericLiteral = t_DoubleLiteral | t_DecimalLiteral | t_IntegerLiteral
-# t_NumericLiteral = t_IntegerLiteral | t_DecimalLiteral | t_DoubleLiteral
 t_NumericLiteral.setName("NumericLiteral")
+t_NumericLiteral.setParseAction(get_numeric_literal_ast)
+
 
 t_EscapeQuot = Literal('""')
 t_EscapeQuot.setName("EscapedQuot")
