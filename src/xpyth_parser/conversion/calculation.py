@@ -1,5 +1,4 @@
 import ast
-import operator
 
 arth_ops = {
     "+": ast.Add(),
@@ -15,15 +14,11 @@ def add_node(i, l_values):
     # Take operator and expressions out of the list
 
     expr_right = l_values.pop(i + 1)
-    if isinstance(expr_right, int):
-        expr_right = ast.Num(expr_right)
 
     op = l_values.pop(i)
     op = arth_ops[op]
 
     expr_left = l_values.pop(i - 1)
-    if isinstance(expr_left, int):
-        expr_left = ast.Num(expr_left)
 
     # get the node
     node = ast.BinOp(expr_left, op, expr_right)
@@ -107,10 +102,8 @@ def get_comparitive_expr(v):
 
     # # Only add a comparative expression if a comparator symbol has been found
     if len(py_ops) > 0:
-        if isinstance(val_list[0], int):
-            py_left = ast.Num(val_list[0])
-        else:
-            py_left = val_list[0]
+
+        py_left = val_list[0]
         #
         #     py_ops = []
         #     for op in ops:
@@ -120,10 +113,8 @@ def get_comparitive_expr(v):
         comps = [v for v in val_list[1:] if v not in comp_expr.keys()]
         py_comps = []
         for comp in comps:
-            if isinstance(comp, int):
-                py_comps.append(ast.Num(comp))
-            else:
-                py_comps.append(comp)
+
+            py_comps.append(comp)
 
         py_compare_expr = ast.Compare(left=py_left, ops=py_ops, comparators=py_comps)
 
