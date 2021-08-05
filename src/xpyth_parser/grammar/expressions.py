@@ -19,8 +19,10 @@ from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Lit
 
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
-from ..conversion.calculation import get_ast, get_unary_expr, get_comparitive_expr
+from ..conversion.calculation import get_additive_expr, get_unary_expr, get_comparitive_expr
+from ..conversion.expressions import get_if_expression
 from ..conversion.function import get_function
+from ..conversion.path import get_single_path_expr, get_path_expr
 
 xpath_version = "3.1"
 
@@ -176,25 +178,7 @@ elif xpath_version == "3.1":
 
 tx_SinglePathExpr = MatchFirst(Literal("//") | Literal("/")) + t_StepExpr
 
-class Axis:
-
-    def __init__(self, axis, step):
-
-        self.axis = axis
-        self.step = step
-
-    def __repr__(self):
-        return f"axis: {self.axis}, step:{self.step}"
-
-def test_single_path_expr(v):
-
-    if len(v) == 2:
-        return Axis(axis=v[0], step=v[1])
-    else:
-        print("")
-        return v
-
-tx_SinglePathExpr.setParseAction(test_single_path_expr)
+tx_SinglePathExpr.setParseAction(get_single_path_expr)
 
 t_RelativePathExpr = t_StepExpr + ZeroOrMore(
     tx_SinglePathExpr
@@ -210,35 +194,8 @@ t_PathExpr = (
 )
 t_PathExpr.setName("PathExpr")
 
-class PathExpression:
 
-    def __init__(self, steps):
-
-        if isinstance(steps, list):
-            self.steps = steps
-        else:
-            self.steps = [steps]
-
-def test_path_expr(v):
-    if v[0] == "/" and len(v) == 1:
-        # https://www.w3.org/TR/xpath-3/#parse-note-leading-lone-slash
-        return "/"
-    elif v[0] in ["/", "//"]:
-        first_step = Axis(axis=v[0], step=v[1])
-        if len(v) > 1:
-
-            steps = list(v[2:])
-        else:
-            steps = []
-        steps.insert(0, first_step)
-
-        return PathExpression(steps=steps)
-    else:
-        # todo: probably ok to not do anything with this, or wrap in path expression anyway?
-
-        return v
-
-t_PathExpr.setParseAction(test_path_expr)
+t_PathExpr.setParseAction(get_path_expr)
 
 
 
@@ -402,7 +359,7 @@ tx_MultiplicativeExpr.setName("MultiplicativeExpr")
 t_AdditiveExpr = tx_MultiplicativeExpr + ZeroOrMore(
     t_ArithmeticAdditiveSymbol + tx_MultiplicativeExpr
 )
-t_AdditiveExpr.setParseAction(get_ast)
+t_AdditiveExpr.setParseAction(get_additive_expr)
 t_AdditiveExpr.setName("Additive_Expr")
 
 
@@ -441,7 +398,7 @@ t_NodeComp.setName("NodeComp")
 
 if xpath_version == "2.0":
     t_ComparisonExpr = t_RangeExpr + Optional(
-        (t_ValueComp | t_GeneralComp | t_NodeComp) + t_RangeExpr
+        (t_ValueComp ^ t_GeneralComp ^ t_NodeComp) + t_RangeExpr
     )
     t_ComparisonExpr.setName("ComparisonExpr")
     t_ComparisonExpr.setParseAction(get_comparitive_expr)
@@ -512,13 +469,13 @@ t_OrExpr.setParseAction(get_or)
 
 """ Conditional Expression """
 t_IfExpr = (
-    Literal("if")
+    Suppress(Keyword("if"))
     + l_par_l
     + t_Expr
     + l_par_r
-    + Literal("then")
+    + Suppress(Keyword("then"))
     + t_ExprSingle
-    + Literal("else")
+    + Suppress(Keyword("else"))
     + t_ExprSingle
 )
 
@@ -526,11 +483,8 @@ t_IfExpr = (
 t_IfExpr.setName("IfExpr")
 
 """ end Conditional Expression """
-def if_thingy(v):
-    print("")
-    return v
 
-t_IfExpr.setParseAction(if_thingy)
+t_IfExpr.setParseAction(get_if_expression)
 
 
 t_SimpleLetBinding = Literal("$") + t_VarName + Keyword(":=") + t_ExprSingle
@@ -544,7 +498,9 @@ t_LetExpr = t_SimpleLetClause + Keyword("return") + t_ExprSingle
 t_LetExpr.setName("LetExpr")
 
 # Set ExprSingle with actual expressions
-t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr | t_LetExpr
+# t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr | t_LetExpr
+# t_ExprSingle <<= t_IfExpr | t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_LetExpr
+t_ExprSingle <<= t_IfExpr ^ t_ForExpr ^ t_OrExpr ^ t_QuantifiedExpr ^ t_LetExpr
 
 t_XPath = t_Expr
 t_XPath.setName("XPath")

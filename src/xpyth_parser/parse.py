@@ -1,6 +1,7 @@
 import ast
-
+from lxml import etree
 from .conversion.functions.generic import Function
+from .conversion.path import PathExpression
 from .conversion.qname import Parameter
 from .grammar.expressions import t_XPath
 
@@ -11,14 +12,31 @@ class ResolveQnames(ast.NodeTransformer):
 
 
 class XPath:
-    def __init__(self, xpath_expr, parseAll=True, variable_map=None):
+    def __init__(self, xpath_expr, parseAll=True, variable_map=None, xml=None, no_resolve=False):
+        """
+
+        :param xpath_expr: String of the XPath expression
+        :param parseAll:
+        :param variable_map: List of variables which Parameters can be mapped to.
+        :param xml: Byte string of an XML object to be parsed
+        :param no_resolve: If set to True, only grammar is parsed but the expression is not resolved
+        """
         self.XPath = t_XPath.parseString(xpath_expr, parseAll=parseAll)
 
-        self.variable_map = variable_map if variable_map else []
+        self.variable_map = variable_map if variable_map else {}
+
+        if xml:
+            self.lxml_etree = etree.fromstring(xml)
+        else:
+            self.lxml_etree = None
+
 
         # If variable map is given, automatically resolve QNames
-        if variable_map:
-            self.resolve_qnames()
+        # if variable_map:
+        if no_resolve is False:
+            # Resolve parameters and path queries the of expression
+            self.resolve_expression()
+
 
     def get_expression(self, expr_nr=0):
         """
@@ -31,7 +49,7 @@ class XPath:
         """
         return ast.Expression(self.XPath[expr_nr])
 
-    def resolve_qnames(self):
+    def resolve_expression(self):
         """
         Loops though parsed results and resolves qnames using the variable_map
 
@@ -39,7 +57,11 @@ class XPath:
         """
         # TODO: Pickle grammar for reuse with different sets of variables
         def resolve_fn(fn):
-            fn.cast_parameters(paramlist=self.variable_map)
+
+            fn.resolve_paths(lxml_etree=self.lxml_etree)
+
+            if self.variable_map:
+                fn.cast_parameters(paramlist=self.variable_map)
 
             # Then get the value by running the function
             value = fn.run()
@@ -47,43 +69,49 @@ class XPath:
             # Put the output value of the function into the AST as a number
             return ast.Num(value)
 
-        for parsed_expr in self.XPath:
+        for i, parsed_expr in enumerate(self.XPath):
 
-            for node in ast.walk(parsed_expr):
-                if hasattr(node, "comparators"):
+            if isinstance(parsed_expr, Function):
+                #Main node is a Function. Resolve this and add the answer to the AST.
+                self.XPath[i] = resolve_fn(parsed_expr)
 
-                    """Go through comparators and replace these with AST nodes based on the variable map"""
-                    for i, comparator in enumerate(node.comparators):
-                        if isinstance(comparator, Parameter):
-                            # Recast the parameter based on information from the variable_map
-                            comparator = comparator.get_ast_node(self.variable_map)
-                            node.comparators[i] = comparator
+            else:
+                # Probably is an AST node and can be resolved by waking through
+                for node in ast.walk(parsed_expr):
+                    if hasattr(node, "comparators"):
 
-                if hasattr(node, "values"):
+                        """Go through comparators and replace these with AST nodes based on the variable map"""
+                        for i, comparator in enumerate(node.comparators):
+                            if isinstance(comparator, Parameter):
+                                # Recast the parameter based on information from the variable_map
+                                comparator = comparator.get_ast_node(self.variable_map)
+                                node.comparators[i] = comparator
 
-                    for i, value in enumerate(node.values):
-                        if isinstance(value, Parameter):
-                            # Recast the parameter based on information from the variable_map
-                            value = value.get_ast_node(self.variable_map)
-                            node.values[i] = value
+                    if hasattr(node, "values"):
 
-                        elif isinstance(value, Function):
-                            node.values[i] = resolve_fn(value)
+                        for i, value in enumerate(node.values):
+                            if isinstance(value, Parameter):
+                                # Recast the parameter based on information from the variable_map
+                                value = value.get_ast_node(self.variable_map)
+                                node.values[i] = value
 
-                if hasattr(node, "operand"):
+                            elif isinstance(value, Function):
+                                node.values[i] = resolve_fn(value)
 
-                    # First cast parameters based on variable map
-                    if isinstance(node.operand, Function):
-                        # Run the function and add the outcome as a value to the operand
-                        node.operand = resolve_fn(node.operand)
+                    if hasattr(node, "operand"):
 
-                if hasattr(node, "left"):
-                    if isinstance(node.left, Function):
-                        node.left = resolve_fn(node.left)
+                        # First cast parameters based on variable map
+                        if isinstance(node.operand, Function):
+                            # Run the function and add the outcome as a value to the operand
+                            node.operand = resolve_fn(node.operand)
 
-                if hasattr(node, "right"):
-                    if isinstance(node.right, Function):
-                        node.right = resolve_fn(node.right)
+                    if hasattr(node, "left"):
+                        if isinstance(node.left, Function):
+                            node.left = resolve_fn(node.left)
+
+                    if hasattr(node, "right"):
+                        if isinstance(node.right, Function):
+                            node.right = resolve_fn(node.right)
 
 
 

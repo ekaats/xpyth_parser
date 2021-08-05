@@ -60,7 +60,7 @@ def get_unary_expr(v):
     """
     Unary Expressions are handled weirdly in the grammar as it can have zero or more operators.
     Right now we only give back a UnaryOp if there is one operator. Otherwise We'll not parse anything
-    and let get_ast() handle it though AdditiveExpr.
+    and let get_additive_expr() handle it though AdditiveExpr.
 
     :param v:
     :return:
@@ -82,11 +82,17 @@ def get_unary_expr(v):
 
 comp_expr = {
     "=": ast.Eq(),
+    "eq": ast.Eq(),
     "!=": ast.NotEq(),
+    "ne": ast.NotEq(),
     "<": ast.Lt(),
+    "lt": ast.Lt(),
     "<=": ast.LtE(),
+    "le": ast.LtE(),
     ">": ast.Gt(),
+    "gt": ast.Gt(),
     ">=": ast.GtE(),
+    "ge": ast.GtE(),
 }
 
 
@@ -95,20 +101,15 @@ def get_comparitive_expr(v):
 
     # Put all operators in one list
     py_ops = []
-    for v in val_list:
-        if v in comp_expr.keys():
+    for val in val_list:
+        if val in comp_expr.keys():
 
-            py_ops.append(comp_expr[v])
+            py_ops.append(comp_expr[val])
 
     # # Only add a comparative expression if a comparator symbol has been found
     if len(py_ops) > 0:
 
         py_left = val_list[0]
-        #
-        #     py_ops = []
-        #     for op in ops:
-        #         py_ops.append(comp_expr[op])
-
         # Everything that isn't the first item or an op is considered a comperator
         comps = [v for v in val_list[1:] if v not in comp_expr.keys()]
         py_comps = []
@@ -123,7 +124,7 @@ def get_comparitive_expr(v):
         return v
 
 
-def get_ast(v):
+def get_additive_expr(v):
 
     l_values = list(v)
 
@@ -131,8 +132,8 @@ def get_ast(v):
     get_nodes(l_values)
 
     # If the final list only has one value, return that value instead of a list.
-    # if len(l_values) == 1 and isinstance(l_values[0], ast.BinOp):
-    if len(l_values) == 1:
+    if len(l_values) == 1 and isinstance(l_values[0], ast.BinOp):
+
         # We expect there to be only one value, which should be a BinOp.
         l_values = l_values[0]
         return l_values
@@ -143,5 +144,5 @@ def get_ast(v):
         return l_values[0]
 
     else:
-        # print("Got more values than expected")
+        # Is not a comparative expression
         return v

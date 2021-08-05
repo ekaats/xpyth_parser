@@ -14,7 +14,7 @@ class FunctionsOperatorsSequences(unittest.TestCase):
     def test_aggregate_functions(self):
 
         # Parse a string using Pyparsing
-        count = XPath("count(1,2,3)", parseAll=True).XPath[0]
+        count = XPath("count(1,2,3)", parseAll=True, no_resolve=True).XPath[0]
 
         # This returns a Python function which can be used elsewhere
         # The function contains the QName which identifies the function, as well as the arguments
@@ -30,7 +30,7 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         #  (e.g., https://www.w3.org/TR/xpath-functions/#func-count)
         self.assertEqual(count.run(), 3)
 
-        avg = XPath("avg(1,4,2,3,12,3,6)", parseAll=True).XPath[0]
+        avg = XPath("avg(1,4,2,3,12,3,6)", parseAll=True, no_resolve=True).XPath[0]
 
         self.assertTrue(isinstance(avg, Avg))
         self.assertEqual(avg.qname, QName(prefix="fn", localname="avg"))
@@ -43,7 +43,7 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         self.assertEqual(avg.arguments[6].value, 6)
         self.assertEqual(avg.run(), 4.428571428571429)
 
-        max = XPath("max(1,4,2,3,12,3,6)", parseAll=True).XPath[0]
+        max = XPath("max(1,4,2,3,12,3,6)", parseAll=True, no_resolve=True).XPath[0]
         self.assertTrue(isinstance(max, Max))
         self.assertEqual(max.qname, QName(prefix="fn", localname="max"))
         self.assertEqual(max.arguments[0].value, 1)
@@ -55,7 +55,7 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         self.assertEqual(max.arguments[6].value, 6)
         self.assertEqual(max.run(), 12)
 
-        min = XPath("min(4,2,3,12,3,6)", parseAll=True).XPath[0]
+        min = XPath("min(4,2,3,12,3,6)", parseAll=True, no_resolve=True).XPath[0]
         self.assertEqual(min.qname, QName(prefix="fn", localname="min"))
         self.assertTrue(isinstance(min, Min))
         self.assertEqual(min.arguments[0].value, 4)
@@ -66,7 +66,7 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         self.assertEqual(min.arguments[5].value, 6)
         self.assertEqual(min.run(), 2)
 
-        sum = XPath("sum(1,4,2,3,12,3,6)", parseAll=True).XPath[0]
+        sum = XPath("sum(1,4,2,3,12,3,6)", parseAll=True, no_resolve=True).XPath[0]
         self.assertEqual(sum.qname, QName(prefix="fn", localname="sum"))
         self.assertTrue(isinstance(sum, Sum))
         self.assertEqual(sum.arguments[0].value, 1)

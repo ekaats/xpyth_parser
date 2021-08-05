@@ -4,7 +4,7 @@ from .functions.generic import Function, Not, Empty
 
 def get_function(v):
     qname = v[0]
-    args = tuple(v[1:])
+    args = list(v[1:])
 
     # If no prefix is defined, FN will be assumed for function calls
     if qname.prefix is None:

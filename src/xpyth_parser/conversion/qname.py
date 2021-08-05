@@ -62,7 +62,12 @@ class Parameter:
             print("Variable map object type not understood")
 
     def resolve_parameter(self, paramlist):
-        return paramlist[self.qname.__str__()]
+        if self.qname.__str__() in paramlist.keys():
+            return paramlist[self.qname.__str__()]
+        else:
+            # Not sure how a parameter that cannot be resolved should be handled.
+            # We can return None or raise an error instead.
+            return None
 
     def __repr__(self):
         return self.qname.localname

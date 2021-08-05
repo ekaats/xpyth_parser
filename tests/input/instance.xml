@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<maindoc>
+    <singleOccuringElement>40000</singleOccuringElement>
+    <doubleOccuringElement>44000</doubleOccuringElement>
+    <doubleOccuringElement>21000</doubleOccuringElement>
+    <nested>
+        <multipleOccuringElement>44000</multipleOccuringElement>
+        <multipleOccuringElement>21000</multipleOccuringElement>
+    </nested>
+    <multipleOccuringElement>1400</multipleOccuringElement>
+    <multipleOccuringElement>6100</multipleOccuringElement>
+</maindoc>

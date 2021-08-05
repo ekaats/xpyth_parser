@@ -9,6 +9,7 @@ from src.xpyth_parser.grammar.expressions import (
     t_ReverseAxis,
     t_ReverseStep,
 )
+from src.xpyth_parser.parse import XPath
 
 
 class PathTraversalTests(unittest.TestCase):
@@ -99,3 +100,33 @@ class PathTraversalTests(unittest.TestCase):
             ),
             [f"preceding-sibling", "::", QName(prefix="prefix", localname="localname")],
         )
+
+    def test_path_instance(self):
+
+        with open("input/instance.xml") as xml_file:
+            xml_bytes = bytes(xml_file.read(), encoding="utf-8")
+
+            self.assertEqual(XPath("count(//singleOccuringElement)", xml=xml_bytes).eval_expression(), 1)
+            self.assertEqual(XPath("count(//singleOccuringElement, $p_val)",
+                                   xml=xml_bytes, variable_map={"p_val": 300}).eval_expression(), 2)
+
+            #Ignore the parameter if no variable_map is given, or the param does not exist in the map
+            self.assertEqual(XPath("count(//singleOccuringElement, $p_val)",
+                                   xml=xml_bytes).eval_expression(), 1)
+            self.assertEqual(XPath("count(//singleOccuringElement, $p_val)",
+                                   xml=xml_bytes, variable_map={"p_val_fault": 300}).eval_expression(), 1)
+
+            self.assertEqual(XPath("sum(//singleOccuringElement)", xml=xml_bytes).eval_expression(), 40000)
+            self.assertTrue(XPath("count(//singleOccuringElement) eq 1", xml=xml_bytes).eval_expression())
+
+
+            self.assertEqual(XPath("count(//doubleOccuringElement)", xml=xml_bytes).eval_expression(), 2)
+            self.assertEqual(XPath("sum(//doubleOccuringElement)", xml=xml_bytes).eval_expression(), 65000)
+            self.assertEqual(XPath("avg(//doubleOccuringElement)", xml=xml_bytes).eval_expression(), 32500)
+            self.assertTrue(XPath("count(//doubleOccuringElement) eq 2", xml=xml_bytes).eval_expression())
+
+            self.assertEqual(XPath("count(//multipleOccuringElement)", xml=xml_bytes).eval_expression(), 4)
+            self.assertEqual(XPath("sum(//multipleOccuringElement)", xml=xml_bytes).eval_expression(), 72500)
+            self.assertEqual(XPath("avg(//multipleOccuringElement)", xml=xml_bytes).eval_expression(), 18125)
+            self.assertTrue(XPath("count(//multipleOccuringElement) eq 4", xml=xml_bytes).eval_expression())
+

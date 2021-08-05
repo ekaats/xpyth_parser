@@ -97,7 +97,7 @@ class ExpressionTests(unittest.TestCase):
         self.assertTrue(isinstance(l3[0].operand.op, ast.Add))
         self.assertEqual(l3[0].operand.right.value, 2)
 
-        l4 = list(XPath("+ sum(1,3)", parseAll=True).XPath)
+        l4 = list(XPath("+ sum(1,3)", parseAll=True, no_resolve=True).XPath)
         self.assertTrue(isinstance(l4[0], ast.UnaryOp))
         self.assertTrue(isinstance(l4[0].op, ast.UAdd))
         # The unary expression before a function should parse correctly
@@ -132,7 +132,7 @@ class ExpressionTests(unittest.TestCase):
             "+ sum($var_to_list) = $var_to_value", variable_map=variable_map
         )
         # Loops though parsed resultes, resolves qnames from variable map
-        xpath_sum.resolve_qnames()
+        xpath_sum.resolve_expression()
         # Evaluate the expression
         self.assertTrue(xpath_sum.eval_expression())
 
@@ -140,7 +140,7 @@ class ExpressionTests(unittest.TestCase):
             "max($var_to_list) = $var_to_value_max", variable_map=variable_map
         )
         # Loops though parsed resultes, resolves qnames from variable map
-        xpath_max.resolve_qnames()
+        xpath_max.resolve_expression()
         # Evaluate the expression
         self.assertTrue(xpath_max.eval_expression())
 
@@ -148,7 +148,7 @@ class ExpressionTests(unittest.TestCase):
             "min($var_to_list) = $var_to_value_min", variable_map=variable_map
         )
         # Loops though parsed resultes, resolves qnames from variable map
-        xpath_min.resolve_qnames()
+        xpath_min.resolve_expression()
         # Evaluate the expression
         self.assertTrue(xpath_min.eval_expression())
 
@@ -156,7 +156,7 @@ class ExpressionTests(unittest.TestCase):
             "count($var_to_list) = $var_to_value_count", variable_map=variable_map
         )
         # Loops though parsed resultes, resolves qnames from variable map
-        xpath_count.resolve_qnames()
+        xpath_count.resolve_expression()
         # Evaluate the expression
         self.assertTrue(xpath_count.eval_expression())
 
@@ -164,6 +164,18 @@ class ExpressionTests(unittest.TestCase):
             "avg($var_to_list) = $var_to_value_avg", variable_map=variable_map
         )
         # Loops though parsed resultes, resolves qnames from variable map
-        xpath_avg.resolve_qnames()
+        xpath_avg.resolve_expression()
         # Evaluate the expression
         self.assertTrue(xpath_avg.eval_expression())
+
+    def test_if_expressions(self):
+        simple_if = list(t_XPath.parseString("if(1 = 1) then a else b", parseAll=True))[0]
+
+
+
+        self.assertEqual(simple_if.test_expr.left.value, 1)
+        self.assertEqual(simple_if.test_expr.comparators[0].value, 1)
+        self.assertTrue(isinstance(simple_if.test_expr.ops[0], ast.Eq))
+        self.assertEqual(simple_if.then_expr, QName(localname="a"))
+        self.assertEqual(simple_if.else_expr, QName(localname="b"))
+
