@@ -117,16 +117,23 @@ class PathTraversalTests(unittest.TestCase):
                                    xml=xml_bytes, variable_map={"p_val_fault": 300}).eval_expression(), 1)
 
             self.assertEqual(XPath("sum(//singleOccuringElement)", xml=xml_bytes).eval_expression(), 40000)
+            self.assertEqual(XPath("avg(//singleOccuringElement)", xml=xml_bytes).eval_expression(), 40000)
+            self.assertEqual(XPath("min(//singleOccuringElement)", xml=xml_bytes).eval_expression(), 40000)
+            self.assertEqual(XPath("max(//singleOccuringElement)", xml=xml_bytes).eval_expression(), 40000)
             self.assertTrue(XPath("count(//singleOccuringElement) eq 1", xml=xml_bytes).eval_expression())
 
 
             self.assertEqual(XPath("count(//doubleOccuringElement)", xml=xml_bytes).eval_expression(), 2)
             self.assertEqual(XPath("sum(//doubleOccuringElement)", xml=xml_bytes).eval_expression(), 65000)
             self.assertEqual(XPath("avg(//doubleOccuringElement)", xml=xml_bytes).eval_expression(), 32500)
+            self.assertEqual(XPath("min(//doubleOccuringElement)", xml=xml_bytes).eval_expression(), 21000)
+            self.assertEqual(XPath("max(//doubleOccuringElement)", xml=xml_bytes).eval_expression(), 44000)
             self.assertTrue(XPath("count(//doubleOccuringElement) eq 2", xml=xml_bytes).eval_expression())
 
             self.assertEqual(XPath("count(//multipleOccuringElement)", xml=xml_bytes).eval_expression(), 4)
             self.assertEqual(XPath("sum(//multipleOccuringElement)", xml=xml_bytes).eval_expression(), 72500)
             self.assertEqual(XPath("avg(//multipleOccuringElement)", xml=xml_bytes).eval_expression(), 18125)
+            self.assertEqual(XPath("min(//multipleOccuringElement)", xml=xml_bytes).eval_expression(), 1400)
+            self.assertEqual(XPath("max(//multipleOccuringElement)", xml=xml_bytes).eval_expression(), 44000)
             self.assertTrue(XPath("count(//multipleOccuringElement) eq 4", xml=xml_bytes).eval_expression())
 
