@@ -1,8 +1,6 @@
 import ast
 from lxml import etree
-from .conversion.functions.generic import Function
-from .conversion.path import PathExpression
-from .conversion.qname import Parameter
+
 from .grammar.expressions import t_XPath
 
 
@@ -11,7 +9,9 @@ class ResolveQnames(ast.NodeTransformer):
         print("")
 
 
-class XPath:
+
+
+class Parser:
     def __init__(self, xpath_expr, parseAll=True, variable_map=None, xml=None, no_resolve=False):
         """
 
@@ -21,105 +21,49 @@ class XPath:
         :param xml: Byte string of an XML object to be parsed
         :param no_resolve: If set to True, only grammar is parsed but the expression is not resolved
         """
-        self.XPath = t_XPath.parseString(xpath_expr, parseAll=parseAll)
+        if isinstance(xpath_expr, str):
+            # Parse the Grammar
 
+            parsed_grammar = t_XPath.parseString(xpath_expr, parseAll=parseAll)
+            if len(parsed_grammar) > 1:
+                raise("Did not expect more than 1 expressions")
+            else:
+                self.XPath = parsed_grammar[0]
+        else:
+            print("Expected a string as input for an XPath Expression")
+
+        # Add variable map to self and child expression
+        self.XPath.variable_map = variable_map if variable_map else {}
         self.variable_map = variable_map if variable_map else {}
 
+
         if xml:
-            self.lxml_etree = etree.fromstring(xml)
+            tree = etree.fromstring(xml)
+            self.XPath.xml_etree = tree
+            self.lxml_etree = tree
         else:
             self.lxml_etree = None
 
 
-        # If variable map is given, automatically resolve QNames
-        # if variable_map:
+        self.no_resolve = no_resolve
         if no_resolve is False:
             # Resolve parameters and path queries the of expression
-            self.resolve_expression()
+            self.XPath.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
 
-
-    def get_expression(self, expr_nr=0):
-        """
-        Returns XPath expression wrapped into an ast.Expression.
-        An XPath expression should resolve into one part,
-        but sometimes this is not the case. expr_nr be used to select a different part of the expression.
-
-        :arg: expr_nr: int
-        :return: ast.Expression
-        """
-        return ast.Expression(self.XPath[expr_nr])
-
-    def resolve_expression(self):
-        """
-        Loops though parsed results and resolves qnames using the variable_map
-
-        :return:
-        """
-        # TODO: Pickle grammar for reuse with different sets of variables
-        def resolve_fn(fn):
-
-            fn.resolve_paths(lxml_etree=self.lxml_etree)
-
-            if self.variable_map:
-                fn.cast_parameters(paramlist=self.variable_map)
-
-            # Then get the value by running the function
-            value = fn.run()
-
-            # Put the output value of the function into the AST as a number
-            return ast.Num(value)
-
-        for i, parsed_expr in enumerate(self.XPath):
-
-            if isinstance(parsed_expr, Function):
-                #Main node is a Function. Resolve this and add the answer to the AST.
-                self.XPath[i] = resolve_fn(parsed_expr)
-
-            else:
-                # Probably is an AST node and can be resolved by waking through
-                for node in ast.walk(parsed_expr):
-                    if hasattr(node, "comparators"):
-
-                        """Go through comparators and replace these with AST nodes based on the variable map"""
-                        for i, comparator in enumerate(node.comparators):
-                            if isinstance(comparator, Parameter):
-                                # Recast the parameter based on information from the variable_map
-                                comparator = comparator.get_ast_node(self.variable_map)
-                                node.comparators[i] = comparator
-
-                    if hasattr(node, "values"):
-
-                        for i, value in enumerate(node.values):
-                            if isinstance(value, Parameter):
-                                # Recast the parameter based on information from the variable_map
-                                value = value.get_ast_node(self.variable_map)
-                                node.values[i] = value
-
-                            elif isinstance(value, Function):
-                                node.values[i] = resolve_fn(value)
-
-                    if hasattr(node, "operand"):
-
-                        # First cast parameters based on variable map
-                        if isinstance(node.operand, Function):
-                            # Run the function and add the outcome as a value to the operand
-                            node.operand = resolve_fn(node.operand)
-
-                    if hasattr(node, "left"):
-                        if isinstance(node.left, Function):
-                            node.left = resolve_fn(node.left)
-
-                    if hasattr(node, "right"):
-                        if isinstance(node.right, Function):
-                            node.right = resolve_fn(node.right)
-
-
-
-    def eval_expression(self):
+    def run(self):
         """
         :return: Result of XPath expression
         """
-        fixed = ast.fix_missing_locations(self.get_expression())
-        compiled_expr = compile(fixed, "", "eval")
-        evaluated_expr = eval(compiled_expr)
-        return evaluated_expr
+        if self.no_resolve is True:
+            # If no_resolve was set to true, resolve now before running the AST.
+            self.XPath.resolve_expression()
+
+        fixed = ast.fix_missing_locations(self.XPath.get_expression())
+        try:
+            compiled_expr = compile(fixed, "", "eval")
+        except:
+            raise Exception
+        else:
+            evaluated_expr = eval(compiled_expr)
+            return evaluated_expr
+

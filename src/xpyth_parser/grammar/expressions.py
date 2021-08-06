@@ -1,5 +1,4 @@
 import ast
-import operator
 
 from pyparsing import (
     Combine,
@@ -20,9 +19,11 @@ from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Lit
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
 from ..conversion.calculation import get_additive_expr, get_unary_expr, get_comparitive_expr
-from ..conversion.expressions import get_if_expression
+from ..conversion.expressions import get_if_expression, IfExpression
 from ..conversion.function import get_function
+from ..conversion.functions.generic import Function
 from ..conversion.path import get_single_path_expr, get_path_expr
+from ..conversion.qname import Parameter
 
 xpath_version = "3.1"
 
@@ -65,8 +66,141 @@ t_QuantifiedExpr = OneOrMore(
 )
 t_QuantifiedExpr.setName("QuantifiedExpr")
 
+class XPath:
+
+    def __init__(self, expr, variable_map=None, xml_etree=None):
+
+        self.expr = expr
+
+        self.variable_map = variable_map if variable_map else {}
+        self.lxml_etree = xml_etree
+
+    def get_expression(self):
+        """
+        Returns XPath expression wrapped into an ast.Expression.
+        An XPath expression should resolve into one part,
+        but sometimes this is not the case. expr_nr be used to select a different part of the expression.
+
+        :arg: expr_nr: int
+        :return: ast.Expression
+        """
+        if isinstance(self.expr, XPath):
+            print("")
+
+        return ast.Expression(self.expr)
+
+    def resolve_expression(self, variable_map, lxml_etree):
+        """
+        Loops though parsed results and resolves qnames using the variable_map
+
+        :return:
+        """
+        # Set variable map and lxml etree. These should not be set at this time
+        if len(self.variable_map) > 0:
+            self.variable_map = variable_map
+
+        if self.lxml_etree is None:
+            self.lxml_etree = lxml_etree
+
+        def resolve_fn(fn):
+            """
+            Wrapper function to run Functions
+            :param fn:
+            :return:
+            """
+
+            fn.resolve_paths(lxml_etree=self.lxml_etree)
+
+            if self.variable_map:
+                fn.cast_parameters(paramlist=self.variable_map)
+
+            # Then get the value by running the function
+            value = fn.run()
+
+            # Put the output value of the function into the AST as a number
+            return ast.Num(value)
+
+        # for i, parsed_expr in enumerate(self.expr):
+
+        if isinstance(self.expr, Function):
+            #Main node is a Function. Resolve this and add the answer to the AST.
+            self.expr = resolve_fn(self.expr)
+
+        elif isinstance(self.expr, IfExpression):
+            # todo: Recursion should work like this:
+            # every Expr should be resolvable by itself.
+            print("")
+
+        elif isinstance(self.expr, XPath):
+            # Need to recursively run the child
+
+
+            # Resolve the expression and substitute the expression for the answer
+            resolved_expr = self.expr.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
+            self.expr = resolved_expr
+
+        else:
+            # Probably is an AST node and can be resolved by waking through
+            for node in ast.walk(self.expr):
+                if hasattr(node, "comparators"):
+
+                    """Go through comparators and replace these with AST nodes based on the variable map"""
+                    for i, comparator in enumerate(node.comparators):
+                        if isinstance(comparator, Parameter):
+                            # Recast the parameter based on information from the variable_map
+                            comparator = comparator.get_ast_node(self.variable_map)
+                            node.comparators[i] = comparator
+                        elif isinstance(comparator, XPath):
+                            # Need to recursively run the child
+                            # Pass information to child
+                            comparator.variable_map = self.variable_map
+                            comparator.lxml_etree = self.lxml_etree
+
+                            resolved_child_expr = comparator.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
+                            node.comparators[i] = resolved_child_expr
+
+
+                if hasattr(node, "values"):
+
+                    for i, value in enumerate(node.values):
+                        if isinstance(value, Parameter):
+                            # Recast the parameter based on information from the variable_map
+                            value = value.get_ast_node(self.variable_map)
+                            node.values[i] = value
+
+                        elif isinstance(value, Function):
+                            node.values[i] = resolve_fn(value)
+
+                if hasattr(node, "operand"):
+
+                    # First cast parameters based on variable map
+                    if isinstance(node.operand, Function):
+                        # Run the function and add the outcome as a value to the operand
+                        node.operand = resolve_fn(node.operand)
+
+                if hasattr(node, "left"):
+                    if isinstance(node.left, Function):
+                        node.left = resolve_fn(node.left)
+                    elif isinstance(node.left, XPath):
+                        node.left = node.left.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
+
+                if hasattr(node, "right"):
+                    if isinstance(node.right, Function):
+                        node.right = resolve_fn(node.right)
+                    elif isinstance(node.right, XPath):
+                        node.right = node.right.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
+
+        # Give back the now resolved expression
+        return self.expr
+
+def wrap_expr(v):
+    expression = v[0]
+
+    return XPath(expr=expression)
+
 t_Expr = t_ExprSingle + ZeroOrMore(Literal(","), t_ExprSingle)
 t_Expr.setName("Expr")
+t_Expr.setParseAction(wrap_expr)
 # https://www.w3.org/TR/xpath20/#doc-xpath-ParenthesizedExpr
 
 
@@ -504,6 +638,7 @@ t_ExprSingle <<= t_IfExpr ^ t_ForExpr ^ t_OrExpr ^ t_QuantifiedExpr ^ t_LetExpr
 
 t_XPath = t_Expr
 t_XPath.setName("XPath")
+
 
 # todo: Generating a railroad map requires Pyparsing 3.0. Uncomment when PP3.0 is released from beta
 # def create_railroad():

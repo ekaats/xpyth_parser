@@ -106,6 +106,12 @@ class Function:
 
                     self.arguments.pop(i)
 
+            elif isinstance(arg, Parameter):
+                pass
+
+            else:
+                print("")
+
     def __repr__(self):
         if self.qname:
             return f"Function: {self.qname} ({self.arguments})"

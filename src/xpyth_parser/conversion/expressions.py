@@ -7,6 +7,10 @@ class IfExpression:
         self.then_expr = then_expr
         self.else_expr = else_expr
 
+    def resolve_expression(self):
+
+        pass
+
 def get_if_expression(v):
 
     parsed_expr = IfExpression(test_expr=v[0], then_expr=v[1], else_expr=v[2])
