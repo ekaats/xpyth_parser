@@ -48,10 +48,10 @@ class Parameter:
 
     def get_ast_node(self, paramlist):
 
-        try:
+        if self.qname.__str__() in paramlist.keys():
             value = paramlist[self.qname.__str__()]
-        except KeyError as e:
-            raise Exception(f"Variable '{e}' not found in variable map")
+        else:
+            raise Exception(f"Variable '{self.qname.__str__()}' not found in variable map")
 
         if isinstance(value, int):
             return ast.Num(value)

@@ -1,7 +1,7 @@
 import ast
 from lxml import etree
 
-from .grammar.expressions import t_XPath
+from .grammar.expressions import t_XPath, resolve_expression
 
 
 class ResolveQnames(ast.NodeTransformer):
@@ -48,7 +48,7 @@ class Parser:
         self.no_resolve = no_resolve
         if no_resolve is False:
             # Resolve parameters and path queries the of expression
-            self.XPath.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
+            resolve_expression(expression=self.XPath, variable_map=self.variable_map, lxml_etree=self.lxml_etree)
 
     def run(self):
         """

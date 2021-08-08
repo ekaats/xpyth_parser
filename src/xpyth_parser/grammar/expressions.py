@@ -9,7 +9,6 @@ from pyparsing import (
     ZeroOrMore,
     Forward,
     Keyword,
-    Word,
     Suppress,
 )
 
@@ -66,6 +65,106 @@ t_QuantifiedExpr = OneOrMore(
 )
 t_QuantifiedExpr.setName("QuantifiedExpr")
 
+
+def resolve_expression(expression, variable_map, lxml_etree):
+    """
+    Loops though parsed results and resolves qnames using the variable_map
+
+    :return:
+    """
+    # Set variable map and lxml etree. These should not be set at this time
+
+    def resolve_fn(fn):
+        """
+        Wrapper function to run Functions
+        :param fn:
+        :return:
+        """
+
+        fn.resolve_paths(lxml_etree=lxml_etree)
+
+        if expression.variable_map:
+            fn.cast_parameters(paramlist=expression.variable_map)
+
+        # Then get the value by running the function
+        value = fn.run()
+
+        # Put the output value of the function into the AST as a number
+        return ast.Num(value)
+
+    # for i, parsed_expr in enumerate(expression.expr):
+
+    if isinstance(expression.expr, Function):
+        # Main node is a Function. Resolve this and add the answer to the AST.
+        expression.expr = resolve_fn(expression.expr)
+
+    elif isinstance(expression.expr, IfExpression):
+        # todo: Recursion should work like this:
+        # every Expr should be resolvable by itexpression.
+        print("")
+
+    elif isinstance(expression.expr, XPath):
+        # Need to recursively run the child
+
+        # Resolve the expression and substitute the expression for the answer
+        resolved_expr = resolve_expression(expression=expression.expr, variable_map=variable_map, lxml_etree=lxml_etree)
+        expression.expr = resolved_expr
+
+    else:
+        # Probably is an AST node and can be resolved by waking through
+        for node in ast.walk(expression.expr):
+            if hasattr(node, "comparators"):
+
+                """Go through comparators and replace these with AST nodes based on the variable map"""
+                for i, comparator in enumerate(node.comparators):
+                    if isinstance(comparator, Parameter):
+                        # Recast the parameter based on information from the variable_map
+                        comparator = comparator.get_ast_node(expression.variable_map)
+                        node.comparators[i] = comparator
+                    elif isinstance(comparator, XPath):
+                        # Need to recursively run the child
+                        # Pass information to child
+                        comparator.variable_map = expression.variable_map
+                        comparator.lxml_etree = lxml_etree
+
+                        resolved_child_expr = resolve_expression(expression=comparator, variable_map=variable_map,
+                                                                            lxml_etree=lxml_etree)
+                        node.comparators[i] = resolved_child_expr
+
+            if hasattr(node, "values"):
+
+                for i, value in enumerate(node.values):
+                    if isinstance(value, Parameter):
+                        # Recast the parameter based on information from the variable_map
+                        value = value.get_ast_node(variable_map)
+                        node.values[i] = value
+
+                    elif isinstance(value, Function):
+                        node.values[i] = resolve_fn(value)
+
+            if hasattr(node, "operand"):
+
+                # First cast parameters based on variable map
+                if isinstance(node.operand, Function):
+                    # Run the function and add the outcome as a value to the operand
+                    node.operand = resolve_fn(node.operand)
+
+            if hasattr(node, "left"):
+                if isinstance(node.left, Function):
+                    node.left = resolve_fn(node.left)
+                elif isinstance(node.left, XPath):
+                    node.left = resolve_expression(expression=node.left, variable_map=variable_map, lxml_etree=lxml_etree)
+
+            if hasattr(node, "right"):
+                if isinstance(node.right, Function):
+                    node.right = resolve_fn(node.right)
+                elif isinstance(node.right, XPath):
+                    node.right = resolve_expression(expression=node.right, variable_map=variable_map,
+                                                               lxml_etree=lxml_etree)
+
+    # Give back the now resolved expression
+    return expression.expr
+
 class XPath:
 
     def __init__(self, expr, variable_map=None, xml_etree=None):
@@ -89,109 +188,7 @@ class XPath:
 
         return ast.Expression(self.expr)
 
-    def resolve_expression(self, variable_map, lxml_etree):
-        """
-        Loops though parsed results and resolves qnames using the variable_map
 
-        :return:
-        """
-        # Set variable map and lxml etree. These should not be set at this time
-        if len(self.variable_map) > 0:
-            self.variable_map = variable_map
-
-        if self.lxml_etree is None:
-            self.lxml_etree = lxml_etree
-
-        def resolve_fn(fn):
-            """
-            Wrapper function to run Functions
-            :param fn:
-            :return:
-            """
-
-            fn.resolve_paths(lxml_etree=self.lxml_etree)
-
-            if self.variable_map:
-                fn.cast_parameters(paramlist=self.variable_map)
-
-            # Then get the value by running the function
-            value = fn.run()
-
-            # Put the output value of the function into the AST as a number
-            return ast.Num(value)
-
-        # for i, parsed_expr in enumerate(self.expr):
-
-        if isinstance(self.expr, Function):
-            #Main node is a Function. Resolve this and add the answer to the AST.
-            self.expr = resolve_fn(self.expr)
-
-        elif isinstance(self.expr, IfExpression):
-            # todo: Recursion should work like this:
-            # every Expr should be resolvable by itself.
-            print("")
-
-        elif isinstance(self.expr, XPath):
-            # Need to recursively run the child
-
-
-            # Resolve the expression and substitute the expression for the answer
-            resolved_expr = self.expr.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
-            self.expr = resolved_expr
-
-        else:
-            # Probably is an AST node and can be resolved by waking through
-            for node in ast.walk(self.expr):
-                if hasattr(node, "comparators"):
-
-                    """Go through comparators and replace these with AST nodes based on the variable map"""
-                    for i, comparator in enumerate(node.comparators):
-                        if isinstance(comparator, Parameter):
-                            # Recast the parameter based on information from the variable_map
-                            comparator = comparator.get_ast_node(self.variable_map)
-                            node.comparators[i] = comparator
-                        elif isinstance(comparator, XPath):
-                            # Need to recursively run the child
-                            # Pass information to child
-                            comparator.variable_map = self.variable_map
-                            comparator.lxml_etree = self.lxml_etree
-
-                            resolved_child_expr = comparator.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
-                            node.comparators[i] = resolved_child_expr
-
-
-                if hasattr(node, "values"):
-
-                    for i, value in enumerate(node.values):
-                        if isinstance(value, Parameter):
-                            # Recast the parameter based on information from the variable_map
-                            value = value.get_ast_node(self.variable_map)
-                            node.values[i] = value
-
-                        elif isinstance(value, Function):
-                            node.values[i] = resolve_fn(value)
-
-                if hasattr(node, "operand"):
-
-                    # First cast parameters based on variable map
-                    if isinstance(node.operand, Function):
-                        # Run the function and add the outcome as a value to the operand
-                        node.operand = resolve_fn(node.operand)
-
-                if hasattr(node, "left"):
-                    if isinstance(node.left, Function):
-                        node.left = resolve_fn(node.left)
-                    elif isinstance(node.left, XPath):
-                        node.left = node.left.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
-
-                if hasattr(node, "right"):
-                    if isinstance(node.right, Function):
-                        node.right = resolve_fn(node.right)
-                    elif isinstance(node.right, XPath):
-                        node.right = node.right.resolve_expression(variable_map=self.variable_map, lxml_etree=self.lxml_etree)
-
-        # Give back the now resolved expression
-        return self.expr
 
 def wrap_expr(v):
     expression = v[0]
