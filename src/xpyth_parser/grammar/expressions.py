@@ -22,10 +22,10 @@ from ..conversion.calculation import (
     get_unary_expr,
     get_comparitive_expr,
 )
-from ..conversion.expressions import get_if_expression, IfExpression
+from ..conversion.expressions import IfExpression
 from ..conversion.function import get_function
 from ..conversion.functions.generic import Function, Datatype
-from ..conversion.path import get_single_path_expr, get_path_expr
+from ..conversion.path import get_single_path_expr, get_path_expr, PathExpression
 from ..conversion.qname import Parameter
 
 xpath_version = "3.1"
@@ -96,7 +96,7 @@ def resolve_simple_expression(expression, variable_map, lxml_etree):
         # Put the output value of the function into the AST as a number
         return ast.Constant(value)
 
-    # Probably is an AST node and can be resolved by waking through
+    # All non AST nodes should be resolved before this point, so here we can assume an AST node to be the root.
     for node in ast.walk(expression):
         if hasattr(node, "comparators"):
 
@@ -173,9 +173,7 @@ def resolve_expression(expression, variable_map, lxml_etree):
         """
 
         fn.resolve_paths(lxml_etree=lxml_etree)
-
-        if expression.variable_map:
-            fn.cast_parameters(paramlist=expression.variable_map)
+        fn.cast_parameters(paramlist=variable_map)
 
         # Then get the value by running the function
         value = fn.run()
@@ -228,6 +226,12 @@ def resolve_expression(expression, variable_map, lxml_etree):
         )
         expression.expr = resolved_expr
 
+    elif isinstance(expression.expr, PathExpression):
+        # Run the path expression against the LXML etree
+        resolved_expr = expression.expr.resolve_path(lxml_etree=lxml_etree)
+        # if resolved_expr is not None:
+        expression.expr = resolved_expr
+
     else:
         expression.expr = resolve_simple_expression(
             expression=expression.expr, variable_map=variable_map, lxml_etree=lxml_etree
@@ -254,9 +258,6 @@ class XPath:
         :arg: expr_nr: int
         :return: ast.Expression
         """
-        if isinstance(self.expr, XPath):
-            print("")
-
         return ast.Expression(self.expr)
 
 
@@ -303,11 +304,14 @@ t_ReverseAxis.setName("ReverseAxis")
 t_AbbrevForwardStep = Optional("@") + t_NodeTest
 t_AbbrevForwardStep.setName("AbbrevForwardStep")
 
+
 t_AbbrevReverseStep = Keyword("..")
 t_AbbrevReverseStep.setName("AbbrevReverseStep")
 
+
 t_ForwardStep = (t_ForwardAxis + t_NodeTest) | t_AbbrevForwardStep
 t_ForwardStep.setName("ForwardStep")
+
 
 t_ReverseStep = (t_ReverseAxis + t_NodeTest) | t_AbbrevReverseStep
 t_ReverseStep.setName("ReverseStep")
@@ -315,8 +319,34 @@ t_ReverseStep.setName("ReverseStep")
 t_Predicate = Suppress("[") + t_Expr + Suppress("]")
 t_Predicate.setName("Predicate")
 
+
+class Predicate:
+    def __init__(self, val):
+        self.val = val
+
+
+def predicate(v):
+    print(f"Getting predicate: {v[0]}")
+    return Predicate(val=v[0])
+
+
+t_Predicate.setParseAction(predicate)
+
+
+def get_predicate_list(toks):
+    # Round up all predicates
+    predicates = []
+    for tok in toks:
+        if isinstance(tok, Predicate):
+            predicates.append(tok)
+
+    return predicates
+
+
 t_PredicateList = ZeroOrMore(t_Predicate)
 t_PredicateList.setName("PredicateList")
+t_PredicateList.setParseAction(get_predicate_list)
+
 
 t_AxisStep = (t_ReverseStep | t_ForwardStep) + t_PredicateList
 t_AxisStep.setName("AxisStep")
@@ -397,12 +427,6 @@ t_PathExpr.setName("PathExpr")
 t_PathExpr.setParseAction(get_path_expr)
 
 
-# axis = {
-#     "/": "(fn:root(self::node()) treat as document-node())/",
-#     "//": "(fn:root(self::node()) treat as document-node())/descendant-or-self::node()/"
-# }
-
-
 """ Primary Expressions"""
 
 t_NamedFunctionRef = t_EQName + Literal("#") + t_IntegerLiteral
@@ -459,6 +483,7 @@ t_SquareArrayConstructor = (
     + Optional(l_par_l + t_ExprSingle + ZeroOrMore(Literal(",") + t_ExprSingle))
     + Literal("]")
 )
+
 
 t_EnclosedExpr = Literal("{") + Optional(t_Expr) + Literal("}")
 t_EnclosedExpr.setName("EnclosedExpr")

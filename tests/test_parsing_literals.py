@@ -44,14 +44,19 @@ class TestLiterals(unittest.TestCase):
 
         # Test via NumericLiteral
         self.assertEqual(
-            t_NumericLiteral.parseString("4362", parseAll=True)[0].value, 4362)
+            t_NumericLiteral.parseString("4362", parseAll=True)[0].value, 4362
+        )
         self.assertEqual(
-            t_NumericLiteral.parseString("4362.21", parseAll=True)[0].value, 4362.21)
+            t_NumericLiteral.parseString("4362.21", parseAll=True)[0].value, 4362.21
+        )
         self.assertEqual(
-            t_NumericLiteral.parseString(".42", parseAll=True)[0].value, 0.42)
+            t_NumericLiteral.parseString(".42", parseAll=True)[0].value, 0.42
+        )
 
         self.assertEqual(
-            t_NumericLiteral.parseString("4362.21e-3", parseAll=True)[0].value, float(4362.21e-3))
+            t_NumericLiteral.parseString("4362.21e-3", parseAll=True)[0].value,
+            float(4362.21e-3),
+        )
 
     def test_char_literals(self):
         """
@@ -93,5 +98,3 @@ class TestLiterals(unittest.TestCase):
             list(t_PrimaryExpr.parseString("'String literal'", parseAll=True)),
             ["String literal"],
         )
-
-

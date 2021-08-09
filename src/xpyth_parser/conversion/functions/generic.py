@@ -107,7 +107,6 @@ class Function:
                     else:
                         self.arguments[i] = resolved_args
 
-
             elif isinstance(arg, Parameter):
                 pass
 

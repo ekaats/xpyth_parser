@@ -27,7 +27,6 @@ class ExpressionTests(unittest.TestCase):
             QName(prefix="var", localname="ref"),
         )
 
-
         l1 = list(t_AdditiveExpr.parseString("1 + 2", parseAll=True))
         self.assertEqual(l1[0].left.value, 1)
         self.assertTrue(isinstance(l1[0].op, ast.Add))
@@ -66,8 +65,6 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(l6[0].qname, QName(prefix="my", localname="function"))
         self.assertEqual(l6[0].arguments[0].value, 1)
         self.assertEqual(l6[0].arguments[1].value, 2)
-
-
 
     def test_operators(self):
         """
@@ -173,13 +170,17 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(direct_xpath.expr.else_expr, QName(localname="b"))
 
         # With the parser, the answer is automatically given.
-        self.assertEqual(Parser("if(1 = 1) then a else b").XPath.expr, QName(localname="a"))
-        self.assertEqual(Parser("if(1 = 1) then a else b").XPath.expr, QName(localname="a"))
+        self.assertEqual(
+            Parser("if(1 = 1) then a else b").XPath.expr, QName(localname="a")
+        )
+        self.assertEqual(
+            Parser("if(1 = 1) then a else b").XPath.expr, QName(localname="a")
+        )
 
         # Or the shorthand, get_outcome
-        self.assertEqual(Parser("if(1 = 1) then a else b").get_outcome(), QName(localname="a"))
-        self.assertEqual(Parser("if(1 = 2) then a else b").get_outcome(), QName(localname="b"))
-
-
-
-
+        self.assertEqual(
+            Parser("if(1 = 1) then a else b").get_outcome(), QName(localname="a")
+        )
+        self.assertEqual(
+            Parser("if(1 = 2) then a else b").get_outcome(), QName(localname="b")
+        )

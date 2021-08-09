@@ -28,7 +28,6 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         self.assertEqual(count.arguments[1].value, 2)
         self.assertEqual(count.arguments[2].value, 3)
 
-
         # Functions can have a run() function which returns a value as described in the Xpath functions document
         #  (e.g., https://www.w3.org/TR/xpath-functions/#func-count)
         self.assertEqual(count.run(), 3)
