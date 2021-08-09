@@ -1,4 +1,3 @@
-
 from isodate import parse_duration, parse_date
 from src.xpyth_parser.conversion.functions.generic import Function
 
@@ -19,6 +18,7 @@ class Date(Function):
         else:
             date = parse_date(self.arguments[0])
             return date
+
 
 class YearMonthDuration(Function):
     """

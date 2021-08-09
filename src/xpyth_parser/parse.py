@@ -10,10 +10,10 @@ class ResolveQnames(ast.NodeTransformer):
         print("")
 
 
-
-
 class Parser:
-    def __init__(self, xpath_expr, parseAll=True, variable_map=None, xml=None, no_resolve=False):
+    def __init__(
+        self, xpath_expr, parseAll=True, variable_map=None, xml=None, no_resolve=False
+    ):
         """
 
         :param xpath_expr: String of the XPath expression
@@ -27,7 +27,7 @@ class Parser:
 
             parsed_grammar = t_XPath.parseString(xpath_expr, parseAll=parseAll)
             if len(parsed_grammar) > 1:
-                raise("Did not expect more than 1 expressions")
+                raise ("Did not expect more than 1 expressions")
             else:
                 self.XPath = parsed_grammar[0]
         else:
@@ -37,7 +37,6 @@ class Parser:
         self.XPath.variable_map = variable_map if variable_map else {}
         self.variable_map = variable_map if variable_map else {}
 
-
         if xml:
             tree = etree.fromstring(xml)
             self.XPath.xml_etree = tree
@@ -45,11 +44,14 @@ class Parser:
         else:
             self.lxml_etree = None
 
-
         self.no_resolve = no_resolve
         if no_resolve is False:
             # Resolve parameters and path queries the of expression
-            resolve_expression(expression=self.XPath, variable_map=self.variable_map, lxml_etree=self.lxml_etree)
+            resolve_expression(
+                expression=self.XPath,
+                variable_map=self.variable_map,
+                lxml_etree=self.lxml_etree,
+            )
 
     def run(self):
         """

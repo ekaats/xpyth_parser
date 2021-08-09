@@ -1,6 +1,4 @@
-
 class IfExpression:
-
     def __init__(self, test_expr, then_expr, else_expr):
 
         self.test_expr = test_expr
@@ -17,7 +15,6 @@ class IfExpression:
         else:
 
             return_expr = self.else_expr
-
 
         return return_expr
 

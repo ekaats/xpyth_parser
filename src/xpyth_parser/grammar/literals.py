@@ -52,11 +52,13 @@ t_DoubleLiteral.addParseAction(str_to_float)
 # I think this is necessary for the PEG based PyParsing library to correctly find the type
 # https://en.wikipedia.org/wiki/Parsing_expression_grammar
 
+
 def get_numeric_literal_ast(v):
     # unparsed_num = v[0]
 
     ast_num = ast.Constant(v[0])
     return ast_num
+
 
 # If IntegerLiteral is checked first, a partial match would be found
 t_NumericLiteral = t_DoubleLiteral | t_DecimalLiteral | t_IntegerLiteral
@@ -78,14 +80,6 @@ t_StringLiteral.setName("StringLiteral")
 # https://www.w3.org/TR/xpath20/#doc-xpath-Literal
 t_Literal = t_NumericLiteral | t_StringLiteral
 t_Literal.setName("Literal")
-
-
-def catch_literal(v):
-    v_l = list(v)
-    return v
-
-
-t_Literal.setParseAction(catch_literal)
 
 t_Char = Regex(
     "[\u0009\u000a\u000d]|[\u0020-\ud7ff]|[\ue000-\ufffd]|[\U00010000-\U0010ffff]"
@@ -114,4 +108,3 @@ t_Name.setName("Name")
 # https://www.w3.org/TR/REC-xml-names/#NT-NCName
 t_NCName = t_Name
 t_NCName.setName("NCName")
-

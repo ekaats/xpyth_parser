@@ -18,7 +18,6 @@ def get_function(v):
         return get_aggregate_function(qname=qname, args=args)
 
     # elif qname.localname in ["empty", "not"]:
-
     if qname.__repr__() == "fn:not":
         return Not(arguments=args, qname=qname)
     elif qname.__repr__() == "fn:empty":
@@ -32,4 +31,3 @@ def get_function(v):
     else:
         # Return generic function if the function name is not found
         return Function(arguments=args, qname=qname)
-
