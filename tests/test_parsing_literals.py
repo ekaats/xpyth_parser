@@ -93,3 +93,5 @@ class TestLiterals(unittest.TestCase):
             list(t_PrimaryExpr.parseString("'String literal'", parseAll=True)),
             ["String literal"],
         )
+
+

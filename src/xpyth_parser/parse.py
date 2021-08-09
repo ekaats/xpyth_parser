@@ -1,6 +1,7 @@
 import ast
 from lxml import etree
 
+from .conversion.functions.generic import Function
 from .grammar.expressions import t_XPath, resolve_expression
 
 
@@ -52,6 +53,8 @@ class Parser:
 
     def run(self):
         """
+        Run the expression as a Python AST.
+
         :return: Result of XPath expression
         """
         if self.no_resolve is True:
@@ -67,3 +70,20 @@ class Parser:
             evaluated_expr = eval(compiled_expr)
             return evaluated_expr
 
+    def get_outcome(self):
+        """
+        Get the outcome without running an AST.
+
+        :return:
+        """
+        if isinstance(self.XPath.expr, ast.Constant):
+            # If the extractable value is the only single expr in the XPath Expression, this will be wrapped
+            return self.XPath.expr.value
+
+        elif isinstance(self.XPath.expr, Function):
+            # If the expression is (still) a function, we'd need to run that function before returning
+            return self.XPath.expr.run()
+
+        else:
+            # Else just return the expression
+            return self.XPath.expr

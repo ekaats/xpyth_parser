@@ -164,13 +164,22 @@ class ExpressionTests(unittest.TestCase):
         self.assertTrue(xpath_avg.run())
 
     def test_if_expressions(self):
-        simple_if = list(t_XPath.parseString("if(1 = 1) then a else b", parseAll=True))[0]
+        direct_xpath = t_XPath.parseString("if(1 = 1) then a else b", parseAll=True)[0]
+
+        self.assertEqual(direct_xpath.expr.test_expr.expr.left.value, 1)
+        self.assertEqual(direct_xpath.expr.test_expr.expr.comparators[0].value, 1)
+        self.assertTrue(isinstance(direct_xpath.expr.test_expr.expr.ops[0], ast.Eq))
+        self.assertEqual(direct_xpath.expr.then_expr, QName(localname="a"))
+        self.assertEqual(direct_xpath.expr.else_expr, QName(localname="b"))
+
+        # With the parser, the answer is automatically given.
+        self.assertEqual(Parser("if(1 = 1) then a else b").XPath.expr, QName(localname="a"))
+        self.assertEqual(Parser("if(1 = 1) then a else b").XPath.expr, QName(localname="a"))
+
+        # Or the shorthand, get_outcome
+        self.assertEqual(Parser("if(1 = 1) then a else b").get_outcome(), QName(localname="a"))
+        self.assertEqual(Parser("if(1 = 2) then a else b").get_outcome(), QName(localname="b"))
 
 
 
-        self.assertEqual(simple_if.expr.test_expr.expr.left.value, 1)
-        self.assertEqual(simple_if.expr.test_expr.expr.comparators[0].value, 1)
-        self.assertTrue(isinstance(simple_if.expr.test_expr.expr.ops[0], ast.Eq))
-        self.assertEqual(simple_if.expr.then_expr, QName(localname="a"))
-        self.assertEqual(simple_if.expr.else_expr, QName(localname="b"))
 

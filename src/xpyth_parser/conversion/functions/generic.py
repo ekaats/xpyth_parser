@@ -1,6 +1,14 @@
 from src.xpyth_parser.conversion.path import PathExpression
 from src.xpyth_parser.conversion.qname import Parameter
 
+class Datatype:
+    def __init__(self, arguments, qname, function_name=None):
+        self.arguments = arguments
+        self.qname = qname
+
+        if function_name:
+            self.function_name = function_name
+
 
 class Function:
     def __init__(self, arguments, qname, function_name=None):
@@ -17,7 +25,7 @@ class Function:
         """
         Holds 'run' function in subclasses
         """
-        raise NotImplemented
+        raise Exception(f"'run' function is not implemented for Function '{self.qname.__str__()}' or function is not defined")
 
     def get_ast(self):
         """
@@ -61,8 +69,8 @@ class Function:
                 # Add this value to the list of arguments.
                 args.append(value)
 
-            else:
-                print("Param type not understood")
+            # else:
+            #     print("Param type not understood")
 
         self.cast_args.extend(args)
         return args
@@ -109,8 +117,6 @@ class Function:
             elif isinstance(arg, Parameter):
                 pass
 
-            else:
-                print("")
 
     def __repr__(self):
         if self.qname:

@@ -1,4 +1,7 @@
+import ast
 import unittest
+from isodate.isodates import date
+from isodate.duration import Duration
 
 from src.xpyth_parser.conversion.functions.aggregate import Count, Avg, Max, Min, Sum
 from src.xpyth_parser.conversion.qname import QName
@@ -77,3 +80,45 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         self.assertEqual(sum.arguments[5].value, 3)
         self.assertEqual(sum.arguments[6].value, 6)
         self.assertEqual(sum.run(), 31)
+
+    def test_date_time(self):
+
+        date_outcome = Parser("xs:date('2021-12-31')")
+
+        self.assertTrue(isinstance(date_outcome.XPath.expr, ast.Constant))
+        self.assertTrue(isinstance(date_outcome.XPath.expr.value, date))
+        self.assertEqual(date_outcome.XPath.expr.value.day, 31)
+        self.assertEqual(date_outcome.XPath.expr.value.month, 12)
+        self.assertEqual(date_outcome.XPath.expr.value.year, 2021)
+
+        # Get the date object without having to go through the tree
+        date_obj = date_outcome.get_outcome()
+        self.assertTrue(isinstance(date_obj, date))
+        self.assertEqual(date_obj.day, 31)
+        self.assertEqual(date_obj.month, 12)
+        self.assertEqual(date_obj.year, 2021)
+
+    def test_year_month_duration(self):
+        duration_outcome = Parser("xs:yearMonthDuration('P20Y30M')")
+
+        self.assertTrue(isinstance(duration_outcome.XPath.expr, ast.Constant))
+        self.assertTrue(isinstance(duration_outcome.XPath.expr.value, Duration))
+        self.assertEqual(duration_outcome.XPath.expr.value.months, 30)
+        self.assertEqual(duration_outcome.XPath.expr.value.years, 20)
+
+        # Get the date object without having to go through the tree
+        daration_obj = duration_outcome.get_outcome()
+        self.assertTrue(isinstance(daration_obj, Duration))
+        self.assertEqual(daration_obj.months, 30)
+        self.assertEqual(daration_obj.years, 20)
+
+        duration_outcome_2 = Parser("xs:yearMonthDuration('-P1347M')")
+
+        self.assertTrue(isinstance(duration_outcome_2.XPath.expr, ast.Constant))
+        self.assertTrue(isinstance(duration_outcome_2.XPath.expr.value, Duration))
+        self.assertEqual(duration_outcome_2.XPath.expr.value.months, -1347)
+
+        # Get the date object without having to go through the tree
+        daration_obj = duration_outcome_2.get_outcome()
+        self.assertTrue(isinstance(daration_obj, Duration))
+        self.assertEqual(daration_obj.months, -1347)
