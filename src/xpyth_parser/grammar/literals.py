@@ -55,7 +55,7 @@ t_DoubleLiteral.addParseAction(str_to_float)
 def get_numeric_literal_ast(v):
     # unparsed_num = v[0]
 
-    ast_num = ast.Num(v[0])
+    ast_num = ast.Constant(v[0])
     return ast_num
 
 # If IntegerLiteral is checked first, a partial match would be found

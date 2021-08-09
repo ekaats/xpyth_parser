@@ -48,21 +48,26 @@ class Parameter:
 
     def get_ast_node(self, paramlist):
 
-        try:
+        if self.qname.__str__() in paramlist.keys():
             value = paramlist[self.qname.__str__()]
-        except KeyError as e:
-            raise Exception(f"Variable '{e}' not found in variable map")
+        else:
+            raise Exception(f"Variable '{self.qname.__str__()}' not found in variable map")
 
         if isinstance(value, int):
-            return ast.Num(value)
+            return ast.Constant(value)
         elif isinstance(value, list):
-            val_list = [ast.Num(v) for v in value]
+            val_list = [ast.Constant(v) for v in value]
             return ast.List(val_list)
         else:
             print("Variable map object type not understood")
 
     def resolve_parameter(self, paramlist):
-        return paramlist[self.qname.__str__()]
+        if self.qname.__str__() in paramlist.keys():
+            return paramlist[self.qname.__str__()]
+        else:
+            # Not sure how a parameter that cannot be resolved should be handled.
+            # We can return None or raise an error instead.
+            return None
 
     def __repr__(self):
         return self.qname.localname

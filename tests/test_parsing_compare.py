@@ -1,6 +1,6 @@
 import unittest
 import ast
-from src.xpyth_parser.parse import XPath
+from src.xpyth_parser.parse import Parser
 
 
 class ComparisonTests(unittest.TestCase):
@@ -10,19 +10,19 @@ class ComparisonTests(unittest.TestCase):
 
         Keyword("=") | Keyword("!=") | Keyword("<") | Keyword("<=") | Keyword(">") | Keyword(">=")
         """
-        l1 = XPath(f"1 = 1")
+        l1 = Parser(f"1 = 1", no_resolve=True)
 
-        self.assertTrue(isinstance(l1.XPath[0], ast.Compare))
-        self.assertEqual(l1.XPath[0].left.value, 1)
-        self.assertTrue(isinstance(l1.XPath[0].ops[0], ast.Eq))
-        self.assertEqual(l1.XPath[0].comparators[0].value, 1)
+        self.assertTrue(isinstance(l1.XPath.expr, ast.Compare))
+        self.assertEqual(l1.XPath.expr.left.value, 1)
+        self.assertTrue(isinstance(l1.XPath.expr.ops[0], ast.Eq))
+        self.assertEqual(l1.XPath.expr.comparators[0].value, 1)
 
-        self.assertTrue(XPath(f"1 = 1").eval_expression())
-        self.assertFalse(XPath(f"1 = 2").eval_expression())
-        self.assertTrue(XPath(f"1 != 2").eval_expression())
-        self.assertFalse(XPath(f"1 != 1").eval_expression())
+        self.assertTrue(Parser(f"1 = 1").run())
+        self.assertFalse(Parser(f"1 = 2").run())
+        self.assertTrue(Parser(f"1 != 2").run())
+        self.assertFalse(Parser(f"1 != 1").run())
 
-        self.assertTrue(XPath(f"1 != (1 + 1)").eval_expression())
-        self.assertTrue(XPath(f"(1 + 2) != (1 + 1)").eval_expression())
-        self.assertTrue(XPath(f"2 = (1 + 1)").eval_expression())
-        self.assertTrue(XPath(f"(1 + 2) = (2 + 1)").eval_expression())
+        self.assertTrue(Parser(f"1 != (1 + 1)").run())
+        self.assertTrue(Parser(f"(1 + 2) != (1 + 1)").run())
+        self.assertTrue(Parser(f"2 = (1 + 1)").run())
+        self.assertTrue(Parser(f"(1 + 2) = (2 + 1)").run())

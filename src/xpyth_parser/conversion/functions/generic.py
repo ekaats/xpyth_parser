@@ -1,4 +1,13 @@
+from src.xpyth_parser.conversion.path import PathExpression
 from src.xpyth_parser.conversion.qname import Parameter
+
+class Datatype:
+    def __init__(self, arguments, qname, function_name=None):
+        self.arguments = arguments
+        self.qname = qname
+
+        if function_name:
+            self.function_name = function_name
 
 
 class Function:
@@ -16,7 +25,7 @@ class Function:
         """
         Holds 'run' function in subclasses
         """
-        raise NotImplemented
+        raise Exception(f"'run' function is not implemented for Function '{self.qname.__str__()}' or function is not defined")
 
     def get_ast(self):
         """
@@ -38,10 +47,13 @@ class Function:
         for i, param in enumerate(self.arguments):
             if isinstance(param, Parameter):
                 param_value = param.resolve_parameter(paramlist=paramlist)
-                if isinstance(param_value, list):
-                    args.extend(param_value)
-                else:
-                    args.append(param_value)
+
+                # Only add the parameter if a value is given.
+                if param_value is not None:
+                    if isinstance(param_value, list):
+                        args.extend(param_value)
+                    else:
+                        args.append(param_value)
 
             elif isinstance(param, int):
                 args.append(param)
@@ -57,11 +69,54 @@ class Function:
                 # Add this value to the list of arguments.
                 args.append(value)
 
-            else:
-                print("Param type not understood")
+            # else:
+            #     print("Param type not understood")
 
-        self.cast_args = args
+        self.cast_args.extend(args)
         return args
+
+    def resolve_paths(self, lxml_etree):
+        """
+        Attempt to resolve path queries
+
+        :param lxml_etree:
+        :return:
+        """
+
+        for i, arg in enumerate(self.arguments):
+            """ Resolve PathExpessions and other non ast things"""
+            if isinstance(arg, PathExpression):
+                # Run the path expression in LXML
+
+                if lxml_etree is not None:
+                    results = lxml_etree.xpath(arg.to_str(), namespaces=lxml_etree.nsmap)
+                    for result in results:
+                        # Try to cast the value to int if applicable.
+                        try:
+                            val = int(result.text)
+                        except:
+                            val = result.text
+
+                        self.cast_args.append(val)
+
+                    substitute = False
+
+                    if substitute:
+                        # Substitute the old argument for the LXML elements.
+                        self.arguments[i] = results
+                    else:
+                        # Otherwise take the argument out.
+                        self.arguments.pop(i)
+
+                else:
+                    # If there is no LXML ETree, we substitute by an empty list
+                    # As we would obviously not have been able to find these elements
+
+                    self.arguments.pop(i)
+
+            elif isinstance(arg, Parameter):
+                pass
+
 
     def __repr__(self):
         if self.qname:

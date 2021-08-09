@@ -15,9 +15,11 @@ class Count(Function):
     def run(self):
 
         if self.cast_args:
+            # If arguments are already casted from parameters or paths, use this information
             return len(self.cast_args)
 
         else:
+            # If casting has not been done, try to get the length of the arguments list.
 
             try:
                 return len(self.arguments)
@@ -37,7 +39,6 @@ class Avg(Function):
         super().__init__(arguments, qname, function_name="count")
 
     def run(self):
-        # Convert ast.Nums back into
 
         if self.cast_args:
             return sum(self.cast_args) / len(self.cast_args)
