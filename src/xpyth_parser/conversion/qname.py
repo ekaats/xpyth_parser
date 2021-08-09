@@ -54,9 +54,9 @@ class Parameter:
             raise Exception(f"Variable '{self.qname.__str__()}' not found in variable map")
 
         if isinstance(value, int):
-            return ast.Num(value)
+            return ast.Constant(value)
         elif isinstance(value, list):
-            val_list = [ast.Num(v) for v in value]
+            val_list = [ast.Constant(v) for v in value]
             return ast.List(val_list)
         else:
             print("Variable map object type not understood")

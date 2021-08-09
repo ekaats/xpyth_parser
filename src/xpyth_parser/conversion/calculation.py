@@ -72,7 +72,6 @@ def get_unary_expr(v):
         op = unary_ops[val_list[0]]
 
         val = v[1]
-        # val = ast.Num(list(v)[1])
         unary_op = ast.UnaryOp(op, val)
         return unary_op
 

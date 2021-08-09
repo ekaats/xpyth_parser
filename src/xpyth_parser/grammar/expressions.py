@@ -90,9 +90,7 @@ def resolve_expression(expression, variable_map, lxml_etree):
         value = fn.run()
 
         # Put the output value of the function into the AST as a number
-        return ast.Num(value)
-
-    # for i, parsed_expr in enumerate(expression.expr):
+        return ast.Constant(value)
 
     if isinstance(expression.expr, Function):
         # Main node is a Function. Resolve this and add the answer to the AST.
@@ -551,19 +549,10 @@ elif xpath_version == "3.1":
 def get_and(v):
     if len(v) > 1:
         if v[1] == "and":
-            # if isinstance(v[0], int):
-            #     a = ast.Num(v[0])
-            # else:
             a = v[0]
-
-            # if isinstance(v[2], int):
-            #     b = ast.Num(v[2])
-            # else:
             b = v[2]
 
             and_op = ast.BoolOp(op=ast.And(), values=[a, b])
-
-            # and_op = AndExpr(a=v[0], b=v[2])
             return ast.fix_missing_locations(and_op)
     return v
 
@@ -583,7 +572,7 @@ def get_or(v):
             a = v[0]
 
             if isinstance(v[2], int):
-                b = ast.Num(v[2])
+                b = ast.Constant(v[2])
             else:
                 b = v[2]
 
@@ -629,8 +618,7 @@ t_LetExpr = t_SimpleLetClause + Keyword("return") + t_ExprSingle
 t_LetExpr.setName("LetExpr")
 
 # Set ExprSingle with actual expressions
-# t_ExprSingle <<= t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_IfExpr | t_LetExpr
-# t_ExprSingle <<= t_IfExpr | t_ForExpr | t_OrExpr | t_QuantifiedExpr | t_LetExpr
+
 t_ExprSingle <<= t_IfExpr ^ t_ForExpr ^ t_OrExpr ^ t_QuantifiedExpr ^ t_LetExpr
 
 t_XPath = t_Expr
