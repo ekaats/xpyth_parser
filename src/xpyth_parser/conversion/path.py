@@ -37,6 +37,29 @@ class PathExpression:
 
         return return_string
 
+    def resolve_path(self, lxml_etree):
+        """
+        Attempt to resolve path queries
+
+        :param lxml_etree: LXML etree which the query is run against
+        :return:
+        """
+
+        found_values = []
+        if lxml_etree is not None:
+            results = lxml_etree.xpath(
+                self.to_str(), namespaces=lxml_etree.nsmap
+            )
+            for result in results:
+                # Try to cast the value to int if applicable.
+                try:
+                    found_values.append(int(result.text))
+                except:
+                    found_values.append(result.text)
+        else:
+            return None
+
+        return found_values
 
 def get_path_expr(v):
     if v[0] == "/" and len(v) == 1:

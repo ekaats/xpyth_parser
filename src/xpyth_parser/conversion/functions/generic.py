@@ -87,37 +87,26 @@ class Function:
         """
 
         for i, arg in enumerate(self.arguments):
-            """Resolve PathExpessions and other non ast things"""
+            """Resolve PathExpressions and other non ast things"""
+
             if isinstance(arg, PathExpression):
-                # Run the path expression in LXML
-
-                if lxml_etree is not None:
-                    results = lxml_etree.xpath(
-                        arg.to_str(), namespaces=lxml_etree.nsmap
-                    )
-                    for result in results:
-                        # Try to cast the value to int if applicable.
-                        try:
-                            val = int(result.text)
-                        except:
-                            val = result.text
-
-                        self.cast_args.append(val)
-
-                    substitute = False
-
-                    if substitute:
-                        # Substitute the old argument for the LXML elements.
-                        self.arguments[i] = results
-                    else:
-                        # Otherwise take the argument out.
-                        self.arguments.pop(i)
-
-                else:
+                if lxml_etree is None:
                     # If there is no LXML ETree, we substitute by an empty list
                     # As we would obviously not have been able to find these elements
-
                     self.arguments.pop(i)
+                else:
+                    # Substitute the old argument for the LXML elements.
+                    resolved_args = arg.resolve_path(lxml_etree=lxml_etree)
+                    if isinstance(resolved_args, list):
+                        # If a list is returned, we need to take out the original parameter and add
+                        #  all found values to list
+                        self.arguments.pop(i)
+                        self.arguments.extend(resolved_args)
+
+                        # If a single value has been returned, we can just replace the parameter
+                    else:
+                        self.arguments[i] = resolved_args
+
 
             elif isinstance(arg, Parameter):
                 pass
