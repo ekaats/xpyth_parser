@@ -17,7 +17,11 @@ from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Lit
 
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
-from ..conversion.calculation import get_additive_expr, get_unary_expr, get_comparitive_expr
+from ..conversion.calculation import (
+    get_additive_expr,
+    get_unary_expr,
+    get_comparitive_expr,
+)
 from ..conversion.expressions import get_if_expression, IfExpression
 from ..conversion.function import get_function
 from ..conversion.functions.generic import Function, Datatype
@@ -65,6 +69,7 @@ t_QuantifiedExpr = OneOrMore(
 )
 t_QuantifiedExpr.setName("QuantifiedExpr")
 
+
 def resolve_simple_expression(expression, variable_map, lxml_etree):
     """
     Resolve simple expressions (ExprSingle in grammar)
@@ -74,6 +79,7 @@ def resolve_simple_expression(expression, variable_map, lxml_etree):
     :param lxml_etree:
     :return:
     """
+
     def resolve_fn(fn):
         """
         Wrapper function to run Functions
@@ -104,8 +110,11 @@ def resolve_simple_expression(expression, variable_map, lxml_etree):
                     # Need to recursively run the child
                     # Pass information to child
 
-                    resolved_child_expr = resolve_expression(expression=comparator, variable_map=variable_map,
-                                                             lxml_etree=lxml_etree)
+                    resolved_child_expr = resolve_expression(
+                        expression=comparator,
+                        variable_map=variable_map,
+                        lxml_etree=lxml_etree,
+                    )
                     node.comparators[i] = resolved_child_expr
 
         if hasattr(node, "values"):
@@ -130,15 +139,23 @@ def resolve_simple_expression(expression, variable_map, lxml_etree):
             if isinstance(node.left, Function):
                 node.left = resolve_fn(node.left)
             elif isinstance(node.left, XPath):
-                node.left = resolve_expression(expression=node.left, variable_map=variable_map, lxml_etree=lxml_etree)
+                node.left = resolve_expression(
+                    expression=node.left,
+                    variable_map=variable_map,
+                    lxml_etree=lxml_etree,
+                )
 
         if hasattr(node, "right"):
             if isinstance(node.right, Function):
                 node.right = resolve_fn(node.right)
             elif isinstance(node.right, XPath):
-                node.right = resolve_expression(expression=node.right, variable_map=variable_map,
-                                                lxml_etree=lxml_etree)
+                node.right = resolve_expression(
+                    expression=node.right,
+                    variable_map=variable_map,
+                    lxml_etree=lxml_etree,
+                )
     return expression
+
 
 def resolve_expression(expression, variable_map, lxml_etree):
     """
@@ -179,8 +196,11 @@ def resolve_expression(expression, variable_map, lxml_etree):
 
     elif isinstance(expression.expr, IfExpression):
         # every Expr should be resolvable by itexpression.
-        test_expr = resolve_expression(expression=expression.expr.test_expr, variable_map=variable_map,
-                                       lxml_etree=lxml_etree)
+        test_expr = resolve_expression(
+            expression=expression.expr.test_expr,
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
+        )
 
         fixed = ast.fix_missing_locations(ast.Expression(test_expr))
         try:
@@ -190,28 +210,34 @@ def resolve_expression(expression, variable_map, lxml_etree):
         else:
             evaluated_expr = eval(compiled_expr)
 
-        outcome = expression.expr.resolve_expression(test_outcome=evaluated_expr, variable_map=variable_map, lxml_etree=lxml_etree)
+        outcome = expression.expr.resolve_expression(
+            test_outcome=evaluated_expr,
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
+        )
 
         # Replace the if statement with its outcome
         expression.expr = outcome
-
-
 
     elif isinstance(expression.expr, XPath):
         # Need to recursively run the child
 
         # Resolve the expression and substitute the expression for the answer
-        resolved_expr = resolve_expression(expression=expression.expr, variable_map=variable_map, lxml_etree=lxml_etree)
+        resolved_expr = resolve_expression(
+            expression=expression.expr, variable_map=variable_map, lxml_etree=lxml_etree
+        )
         expression.expr = resolved_expr
 
     else:
-        expression.expr = resolve_simple_expression(expression=expression.expr, variable_map=variable_map, lxml_etree=lxml_etree)
+        expression.expr = resolve_simple_expression(
+            expression=expression.expr, variable_map=variable_map, lxml_etree=lxml_etree
+        )
 
     # Give back the now resolved expression
     return expression.expr
 
-class XPath:
 
+class XPath:
     def __init__(self, expr, variable_map=None, xml_etree=None):
 
         self.expr = expr
@@ -234,11 +260,11 @@ class XPath:
         return ast.Expression(self.expr)
 
 
-
 def wrap_expr(v):
     expression = v[0]
 
     return XPath(expr=expression)
+
 
 t_Expr = t_ExprSingle + ZeroOrMore(Literal(","), t_ExprSingle)
 t_Expr.setName("Expr")
@@ -356,11 +382,8 @@ tx_SinglePathExpr = MatchFirst(Literal("//") | Literal("/")) + t_StepExpr
 
 tx_SinglePathExpr.setParseAction(get_single_path_expr)
 
-t_RelativePathExpr = t_StepExpr + ZeroOrMore(
-    tx_SinglePathExpr
-)
+t_RelativePathExpr = t_StepExpr + ZeroOrMore(tx_SinglePathExpr)
 t_RelativePathExpr.setName("RelativePathExpr")
-
 
 
 t_PathExpr = (
@@ -374,12 +397,10 @@ t_PathExpr.setName("PathExpr")
 t_PathExpr.setParseAction(get_path_expr)
 
 
-
-    # axis = {
-    #     "/": "(fn:root(self::node()) treat as document-node())/",
-    #     "//": "(fn:root(self::node()) treat as document-node())/descendant-or-self::node()/"
-    # }
-
+# axis = {
+#     "/": "(fn:root(self::node()) treat as document-node())/",
+#     "//": "(fn:root(self::node()) treat as document-node())/descendant-or-self::node()/"
+# }
 
 
 """ Primary Expressions"""
@@ -623,6 +644,7 @@ def get_or(v):
             or_op = ast.BoolOp(op=ast.Or(), values=[a, b])
             return ast.fix_missing_locations(or_op)
     return v
+
 
 t_OrExpr = t_AndExpr + ZeroOrMore(Keyword("or") + t_AndExpr)
 t_OrExpr.setName("OrExpr")

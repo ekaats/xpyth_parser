@@ -51,7 +51,9 @@ class Parameter:
         if self.qname.__str__() in paramlist.keys():
             value = paramlist[self.qname.__str__()]
         else:
-            raise Exception(f"Variable '{self.qname.__str__()}' not found in variable map")
+            raise Exception(
+                f"Variable '{self.qname.__str__()}' not found in variable map"
+            )
 
         if isinstance(value, int):
             return ast.Constant(value)

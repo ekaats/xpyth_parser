@@ -1,11 +1,8 @@
-
-
 # # todo: temporary flag for
 # direct_parse = True
 
 
 class Axis:
-
     def __init__(self, axis, step):
 
         self.axis = axis
@@ -13,6 +10,7 @@ class Axis:
 
     def __repr__(self):
         return f"axis: {self.axis}, step:{self.step}"
+
 
 def get_single_path_expr(v):
 
@@ -24,7 +22,6 @@ def get_single_path_expr(v):
 
 
 class PathExpression:
-
     def __init__(self, steps):
 
         if isinstance(steps, list):
@@ -39,6 +36,7 @@ class PathExpression:
             return_string += str(step.step)
 
         return return_string
+
 
 def get_path_expr(v):
     if v[0] == "/" and len(v) == 1:

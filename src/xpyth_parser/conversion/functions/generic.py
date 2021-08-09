@@ -1,6 +1,7 @@
 from src.xpyth_parser.conversion.path import PathExpression
 from src.xpyth_parser.conversion.qname import Parameter
 
+
 class Datatype:
     def __init__(self, arguments, qname, function_name=None):
         self.arguments = arguments
@@ -25,7 +26,9 @@ class Function:
         """
         Holds 'run' function in subclasses
         """
-        raise Exception(f"'run' function is not implemented for Function '{self.qname.__str__()}' or function is not defined")
+        raise Exception(
+            f"'run' function is not implemented for Function '{self.qname.__str__()}' or function is not defined"
+        )
 
     def get_ast(self):
         """
@@ -84,12 +87,14 @@ class Function:
         """
 
         for i, arg in enumerate(self.arguments):
-            """ Resolve PathExpessions and other non ast things"""
+            """Resolve PathExpessions and other non ast things"""
             if isinstance(arg, PathExpression):
                 # Run the path expression in LXML
 
                 if lxml_etree is not None:
-                    results = lxml_etree.xpath(arg.to_str(), namespaces=lxml_etree.nsmap)
+                    results = lxml_etree.xpath(
+                        arg.to_str(), namespaces=lxml_etree.nsmap
+                    )
                     for result in results:
                         # Try to cast the value to int if applicable.
                         try:
@@ -117,7 +122,6 @@ class Function:
             elif isinstance(arg, Parameter):
                 pass
 
-
     def __repr__(self):
         if self.qname:
             return f"Function: {self.qname} ({self.arguments})"
@@ -132,8 +136,8 @@ class Function:
     def __hash__(self):
         return hash(self.__repr__())
 
-class Empty(Function):
 
+class Empty(Function):
     def __init__(self, arguments, qname=None):
         super().__init__(arguments, qname, function_name="empty")
 
@@ -150,8 +154,8 @@ class Empty(Function):
         else:
             raise Exception("Run self.cast_parameters(paramlist) first")
 
-class Not(Function):
 
+class Not(Function):
     def __init__(self, arguments, qname=None):
         super().__init__(arguments, qname, function_name="not")
 
@@ -160,7 +164,7 @@ class Not(Function):
         if self.cast_args:
             for arg in self.cast_args:
                 if arg is True:
-                    return False # found an argument that is true
+                    return False  # found an argument that is true
 
             # Did not find a True value
             return True
@@ -168,6 +172,7 @@ class Not(Function):
         else:
 
             raise Exception("Run self.cast_parameters(paramlist) first")
+
 
 class OrExpr:
     def __init__(self, a, b):
