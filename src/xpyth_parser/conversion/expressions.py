@@ -17,9 +17,3 @@ class IfExpression:
             return_expr = self.else_expr
 
         return return_expr
-
-
-def get_if_expression(v):
-
-    parsed_expr = IfExpression(test_expr=v[0], then_expr=v[1], else_expr=v[2])
-    return parsed_expr

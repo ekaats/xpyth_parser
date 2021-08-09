@@ -670,7 +670,10 @@ t_IfExpr.setName("IfExpr")
 
 """ end Conditional Expression """
 
-t_IfExpr.setParseAction(get_if_expression)
+
+t_IfExpr.setParseAction(
+    lambda toks: IfExpression(test_expr=toks[0], then_expr=toks[1], else_expr=toks[2])
+)
 
 
 t_SimpleLetBinding = Literal("$") + t_VarName + Keyword(":=") + t_ExprSingle
