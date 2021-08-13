@@ -1,5 +1,5 @@
-from src.xpyth_parser.conversion.path import PathExpression
-from src.xpyth_parser.conversion.qname import Parameter
+from .. import path
+from ..qname import Parameter
 
 
 class Datatype:
@@ -89,7 +89,7 @@ class Function:
         for i, arg in enumerate(self.arguments):
             """Resolve PathExpressions and other non ast things"""
 
-            if isinstance(arg, PathExpression):
+            if isinstance(arg, path.PathExpression):
                 if lxml_etree is None:
                     # If there is no LXML ETree, we substitute by an empty list
                     # As we would obviously not have been able to find these elements
