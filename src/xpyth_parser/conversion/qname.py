@@ -1,4 +1,3 @@
-import ast
 
 
 def qname_from_parse_results(a, string):
@@ -45,21 +44,6 @@ class Parameter:
     def __init__(self, qname, type_declaration=None):
         self.qname = qname
         self.type_declaration = type_declaration
-
-    def get_ast_node(self, paramlist):
-
-        if self.qname.__str__() in paramlist.keys():
-            value = paramlist[self.qname.__str__()]
-        else:
-            raise Exception(f"Variable '{self.qname.__str__()}' not found in variable map")
-
-        if isinstance(value, int):
-            return ast.Constant(value)
-        elif isinstance(value, list):
-            val_list = [ast.Constant(v) for v in value]
-            return ast.List(val_list)
-        else:
-            print("Variable map object type not understood")
 
     def resolve_parameter(self, paramlist):
         if self.qname.__str__() in paramlist.keys():

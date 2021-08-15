@@ -1,5 +1,7 @@
 import unittest
-import ast
+import operator
+
+from src.xpyth_parser.conversion.calculation import Compare
 from src.xpyth_parser.parse import Parser
 
 
@@ -12,10 +14,9 @@ class ComparisonTests(unittest.TestCase):
         """
         l1 = Parser(f"1 = 1", no_resolve=True)
 
-        self.assertTrue(isinstance(l1.XPath.expr, ast.Compare))
-        self.assertEqual(l1.XPath.expr.left.value, 1)
-        self.assertTrue(isinstance(l1.XPath.expr.ops[0], ast.Eq))
-        self.assertEqual(l1.XPath.expr.comparators[0].value, 1)
+        self.assertTrue(isinstance(l1.XPath.expr, Compare))
+        self.assertEqual(l1.XPath.expr.left, 1)
+        self.assertEqual(l1.XPath.expr.comparators[0], 1)
 
         self.assertTrue(Parser(f"1 = 1").run())
         self.assertFalse(Parser(f"1 = 2").run())
@@ -24,5 +25,6 @@ class ComparisonTests(unittest.TestCase):
 
         self.assertTrue(Parser(f"1 != (1 + 1)").run())
         self.assertTrue(Parser(f"(1 + 2) != (1 + 1)").run())
-        self.assertTrue(Parser(f"2 = (1 + 1)").run())
+        self.assertTrue(Parser(f"2 = (1 + 1)").run())      # General comparison
+        self.assertTrue(Parser(f"2 eq (1 + 1)").run())      # Value comparison
         self.assertTrue(Parser(f"(1 + 2) = (2 + 1)").run())

@@ -1,5 +1,6 @@
-from src.xpyth_parser.conversion.path import PathExpression
-from src.xpyth_parser.conversion.qname import Parameter
+from .. import path
+from ..qname import Parameter
+
 
 class Datatype:
     def __init__(self, arguments, qname, function_name=None):
@@ -25,15 +26,9 @@ class Function:
         """
         Holds 'run' function in subclasses
         """
-        raise Exception(f"'run' function is not implemented for Function '{self.qname.__str__()}' or function is not defined")
-
-    def get_ast(self):
-        """
-        Returns a Python AST object
-
-        :return:
-        """
-        raise NotImplemented
+        raise Exception(
+            f"'run' function is not implemented for Function '{self.qname.__str__()}' or function is not defined"
+        )
 
     def cast_parameters(self, paramlist):
         """
@@ -69,8 +64,6 @@ class Function:
                 # Add this value to the list of arguments.
                 args.append(value)
 
-            # else:
-            #     print("Param type not understood")
 
         self.cast_args.extend(args)
         return args
@@ -84,38 +77,24 @@ class Function:
         """
 
         for i, arg in enumerate(self.arguments):
-            """ Resolve PathExpessions and other non ast things"""
-            if isinstance(arg, PathExpression):
-                # Run the path expression in LXML
 
-                if lxml_etree is not None:
-                    results = lxml_etree.xpath(arg.to_str(), namespaces=lxml_etree.nsmap)
-                    for result in results:
-                        # Try to cast the value to int if applicable.
-                        try:
-                            val = int(result.text)
-                        except:
-                            val = result.text
-
-                        self.cast_args.append(val)
-
-                    substitute = False
-
-                    if substitute:
-                        # Substitute the old argument for the LXML elements.
-                        self.arguments[i] = results
-                    else:
-                        # Otherwise take the argument out.
-                        self.arguments.pop(i)
-
-                else:
+            if isinstance(arg, path.PathExpression):
+                if lxml_etree is None:
                     # If there is no LXML ETree, we substitute by an empty list
                     # As we would obviously not have been able to find these elements
-
                     self.arguments.pop(i)
+                else:
+                    # Substitute the old argument for the LXML elements.
+                    resolved_args = arg.resolve_path(lxml_etree=lxml_etree)
+                    if isinstance(resolved_args, list):
+                        # If a list is returned, we need to take out the original parameter and add
+                        #  all found values to list
+                        self.arguments.pop(i)
+                        self.arguments.extend(resolved_args)
 
-            elif isinstance(arg, Parameter):
-                pass
+                        # If a single value has been returned, we can just replace the parameter
+                    else:
+                        self.arguments[i] = resolved_args
 
 
     def __repr__(self):
@@ -132,8 +111,8 @@ class Function:
     def __hash__(self):
         return hash(self.__repr__())
 
-class Empty(Function):
 
+class Empty(Function):
     def __init__(self, arguments, qname=None):
         super().__init__(arguments, qname, function_name="empty")
 
@@ -150,8 +129,8 @@ class Empty(Function):
         else:
             raise Exception("Run self.cast_parameters(paramlist) first")
 
-class Not(Function):
 
+class Not(Function):
     def __init__(self, arguments, qname=None):
         super().__init__(arguments, qname, function_name="not")
 
@@ -160,7 +139,7 @@ class Not(Function):
         if self.cast_args:
             for arg in self.cast_args:
                 if arg is True:
-                    return False # found an argument that is true
+                    return False  # found an argument that is true
 
             # Did not find a True value
             return True
@@ -168,6 +147,7 @@ class Not(Function):
         else:
 
             raise Exception("Run self.cast_parameters(paramlist) first")
+
 
 class OrExpr:
     def __init__(self, a, b):

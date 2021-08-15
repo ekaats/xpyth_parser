@@ -43,7 +43,9 @@ t_ElementTest.setParseAction(elementTest)
 t_ElementDeclaration = t_ElementName
 t_ElementDeclaration.setName("ElementDeclaration")
 
-t_SchemaElementTest = Keyword("schema-element") + l_par_l + t_ElementDeclaration + l_par_r
+t_SchemaElementTest = (
+    Keyword("schema-element") + l_par_l + t_ElementDeclaration + l_par_r
+)
 t_SchemaElementTest.setParseAction(schemaElementTest)
 t_SchemaElementTest.setName("schema-element")
 

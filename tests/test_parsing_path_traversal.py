@@ -23,7 +23,9 @@ class PathTraversalTests(unittest.TestCase):
         """
 
         self.assertEqual(list(t_PredicateList.parseString("", parseAll=True)), [])
-        self.assertEqual(list(t_PredicateList.parseString("[1]", parseAll=True))[0].expr.value, 1)
+        self.assertEqual(
+            list(t_PredicateList.parseString("[1]", parseAll=True))[0].val.expr, 1
+        )
 
     def test_path_expressions(self):
         """
@@ -106,34 +108,81 @@ class PathTraversalTests(unittest.TestCase):
         with open("input/instance.xml") as xml_file:
             xml_bytes = bytes(xml_file.read(), encoding="utf-8")
 
-            self.assertEqual(Parser("count(//singleOccuringElement)", xml=xml_bytes).run(), 1)
-            self.assertEqual(Parser("count(//singleOccuringElement, $p_val)",
-                                    xml=xml_bytes, variable_map={"p_val": 300}).run(), 2)
+            self.assertEqual(
+                Parser("count(//singleOccuringElement)", xml=xml_bytes).run(), 1
+            )
+            self.assertEqual(
+                Parser(
+                    "count(//singleOccuringElement, $p_val)",
+                    xml=xml_bytes,
+                    variable_map={"p_val": 300},
+                ).run(),
+                2,
+            )
 
-            #Ignore the parameter if no variable_map is given, or the param does not exist in the map
-            self.assertEqual(Parser("count(//singleOccuringElement, $p_val)",
-                                    xml=xml_bytes).run(), 1)
-            self.assertEqual(Parser("count(//singleOccuringElement, $p_val)",
-                                    xml=xml_bytes, variable_map={"p_val_fault": 300}).run(), 1)
+            # Ignore the parameter if no variable_map is given, or the param does not exist in the map
+            self.assertEqual(
+                Parser("count(//singleOccuringElement, $p_val)", xml=xml_bytes).run(), 1
+            )
+            self.assertEqual(
+                Parser(
+                    "count(//singleOccuringElement, $p_val)",
+                    xml=xml_bytes,
+                    variable_map={"p_val_fault": 300},
+                ).run(),
+                1,
+            )
 
-            self.assertEqual(Parser("sum(//singleOccuringElement)", xml=xml_bytes).run(), 40000)
-            self.assertEqual(Parser("avg(//singleOccuringElement)", xml=xml_bytes).run(), 40000)
-            self.assertEqual(Parser("min(//singleOccuringElement)", xml=xml_bytes).run(), 40000)
-            self.assertEqual(Parser("max(//singleOccuringElement)", xml=xml_bytes).run(), 40000)
-            self.assertTrue(Parser("count(//singleOccuringElement) eq 1", xml=xml_bytes).run())
+            self.assertEqual(
+                Parser("sum(//singleOccuringElement)", xml=xml_bytes).run(), 40000
+            )
+            self.assertEqual(
+                Parser("avg(//singleOccuringElement)", xml=xml_bytes).run(), 40000
+            )
+            self.assertEqual(
+                Parser("min(//singleOccuringElement)", xml=xml_bytes).run(), 40000
+            )
+            self.assertEqual(
+                Parser("max(//singleOccuringElement)", xml=xml_bytes).run(), 40000
+            )
+            self.assertTrue(
+                Parser("count(//singleOccuringElement) eq 1", xml=xml_bytes).run()
+            )
 
+            self.assertEqual(
+                Parser("count(//doubleOccuringElement)", xml=xml_bytes).run(), 2
+            )
+            self.assertEqual(
+                Parser("sum(//doubleOccuringElement)", xml=xml_bytes).run(), 65000
+            )
+            self.assertEqual(
+                Parser("avg(//doubleOccuringElement)", xml=xml_bytes).run(), 32500
+            )
+            self.assertEqual(
+                Parser("min(//doubleOccuringElement)", xml=xml_bytes).run(), 21000
+            )
+            self.assertEqual(
+                Parser("max(//doubleOccuringElement)", xml=xml_bytes).run(), 44000
+            )
+            self.assertTrue(
+                Parser("count(//doubleOccuringElement) eq 2", xml=xml_bytes).run()
+            )
 
-            self.assertEqual(Parser("count(//doubleOccuringElement)", xml=xml_bytes).run(), 2)
-            self.assertEqual(Parser("sum(//doubleOccuringElement)", xml=xml_bytes).run(), 65000)
-            self.assertEqual(Parser("avg(//doubleOccuringElement)", xml=xml_bytes).run(), 32500)
-            self.assertEqual(Parser("min(//doubleOccuringElement)", xml=xml_bytes).run(), 21000)
-            self.assertEqual(Parser("max(//doubleOccuringElement)", xml=xml_bytes).run(), 44000)
-            self.assertTrue(Parser("count(//doubleOccuringElement) eq 2", xml=xml_bytes).run())
-
-            self.assertEqual(Parser("count(//multipleOccuringElement)", xml=xml_bytes).run(), 4)
-            self.assertEqual(Parser("sum(//multipleOccuringElement)", xml=xml_bytes).run(), 72500)
-            self.assertEqual(Parser("avg(//multipleOccuringElement)", xml=xml_bytes).run(), 18125)
-            self.assertEqual(Parser("min(//multipleOccuringElement)", xml=xml_bytes).run(), 1400)
-            self.assertEqual(Parser("max(//multipleOccuringElement)", xml=xml_bytes).run(), 44000)
-            self.assertTrue(Parser("count(//multipleOccuringElement) eq 4", xml=xml_bytes).run())
-
+            self.assertEqual(
+                Parser("count(//multipleOccuringElement)", xml=xml_bytes).run(), 4
+            )
+            self.assertEqual(
+                Parser("sum(//multipleOccuringElement)", xml=xml_bytes).run(), 72500
+            )
+            self.assertEqual(
+                Parser("avg(//multipleOccuringElement)", xml=xml_bytes).run(), 18125
+            )
+            self.assertEqual(
+                Parser("min(//multipleOccuringElement)", xml=xml_bytes).run(), 1400
+            )
+            self.assertEqual(
+                Parser("max(//multipleOccuringElement)", xml=xml_bytes).run(), 44000
+            )
+            self.assertTrue(
+                Parser("count(//multipleOccuringElement) eq 4", xml=xml_bytes).run()
+            )

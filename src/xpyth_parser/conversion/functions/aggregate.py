@@ -1,4 +1,3 @@
-import ast
 
 from .generic import Function
 from ..qname import Parameter
@@ -45,14 +44,8 @@ class Avg(Function):
 
         else:
             try:
-                # Cast args into values
-                args = []
-                for arg in self.arguments:
-                    if isinstance(arg, ast.Constant):
-                        args.append(arg.value)
-                    else:
-                        args.append(arg)
-                return sum(args) / len(args)
+
+                return sum(self.arguments) / len(self.arguments)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
@@ -73,14 +66,8 @@ class Max(Function):
 
         else:
             try:
-                # Cast args into values
-                args = []
-                for arg in self.arguments:
-                    if isinstance(arg, ast.Constant):
-                        args.append(arg.value)
-                    else:
-                        args.append(arg)
-                return max(args)
+
+                return max(self.arguments)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
@@ -101,14 +88,8 @@ class Min(Function):
 
         else:
             try:
-                # Cast args into values
-                args = []
-                for arg in self.arguments:
-                    if isinstance(arg, ast.Constant):
-                        args.append(arg.value)
-                    else:
-                        args.append(arg)
-                return min(args)
+
+                return min(self.arguments)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
@@ -129,14 +110,8 @@ class Sum(Function):
 
         else:
             try:
-                # Cast args into values
-                args = []
-                for arg in self.arguments:
-                    if isinstance(arg, ast.Constant):
-                        args.append(arg.value)
-                    else:
-                        args.append(arg)
-                return sum(args)
+
+                return sum(self.arguments)
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
 

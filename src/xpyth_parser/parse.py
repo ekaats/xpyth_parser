@@ -1,19 +1,12 @@
-import ast
 from lxml import etree
 
-from .conversion.functions.generic import Function
 from .grammar.expressions import t_XPath, resolve_expression
 
 
-class ResolveQnames(ast.NodeTransformer):
-    def visit_QName(self, node):
-        print("")
-
-
-
-
 class Parser:
-    def __init__(self, xpath_expr, parseAll=True, variable_map=None, xml=None, no_resolve=False):
+    def __init__(
+        self, xpath_expr, parseAll=True, variable_map=None, xml=None, no_resolve=False
+    ):
         """
 
         :param xpath_expr: String of the XPath expression
@@ -27,7 +20,7 @@ class Parser:
 
             parsed_grammar = t_XPath.parseString(xpath_expr, parseAll=parseAll)
             if len(parsed_grammar) > 1:
-                raise("Did not expect more than 1 expressions")
+                raise ("Did not expect more than 1 expressions")
             else:
                 self.XPath = parsed_grammar[0]
         else:
@@ -37,7 +30,6 @@ class Parser:
         self.XPath.variable_map = variable_map if variable_map else {}
         self.variable_map = variable_map if variable_map else {}
 
-
         if xml:
             tree = etree.fromstring(xml)
             self.XPath.xml_etree = tree
@@ -45,11 +37,15 @@ class Parser:
         else:
             self.lxml_etree = None
 
-
         self.no_resolve = no_resolve
         if no_resolve is False:
             # Resolve parameters and path queries the of expression
-            resolve_expression(expression=self.XPath, variable_map=self.variable_map, lxml_etree=self.lxml_etree)
+
+            self.resolved_answer = resolve_expression(
+                expression=self.XPath,
+                variable_map=self.variable_map,
+                lxml_etree=self.lxml_etree,
+            )
 
     def run(self):
         """
@@ -58,32 +54,15 @@ class Parser:
         :return: Result of XPath expression
         """
         if self.no_resolve is True:
-            # If no_resolve was set to true, resolve now before running the AST.
-            self.XPath.resolve_expression()
-
-        fixed = ast.fix_missing_locations(self.XPath.get_expression())
-        try:
-            compiled_expr = compile(fixed, "", "eval")
-        except:
-            raise Exception
+            # If no_resolve was set to true, resolve now
+            answer = resolve_expression(
+                expression=self.XPath,
+                variable_map=self.variable_map,
+                lxml_etree=self.lxml_etree,
+                context_item=self.context_item
+            )
         else:
-            evaluated_expr = eval(compiled_expr)
-            return evaluated_expr
+            # Otherwise return the answer that is resolved beforehand
+            return self.resolved_answer
 
-    def get_outcome(self):
-        """
-        Get the outcome without running an AST.
-
-        :return:
-        """
-        if isinstance(self.XPath.expr, ast.Constant):
-            # If the extractable value is the only single expr in the XPath Expression, this will be wrapped
-            return self.XPath.expr.value
-
-        elif isinstance(self.XPath.expr, Function):
-            # If the expression is (still) a function, we'd need to run that function before returning
-            return self.XPath.expr.run()
-
-        else:
-            # Else just return the expression
-            return self.XPath.expr
+        return answer

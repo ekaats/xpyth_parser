@@ -1,12 +1,153 @@
-import ast
+
+import operator
+
+from src.xpyth_parser.conversion.functions.generic import Function
+from src.xpyth_parser.conversion.qname import Parameter
+
 
 arth_ops = {
-    "+": ast.Add(),
-    "-": ast.Sub(),
-    "*": ast.Mult(),
-    "div": ast.Div(),
-    "mod": ast.Mod(),
+    "+": operator.add,
+    "-": operator.sub,
+    "*": operator.mul,
+    "div": operator.truediv,
+    "mod": operator.mod,
 }
+
+
+class Operator:
+    pass
+
+    @property
+    def operator(self):
+        # self.op does not show up in debugger. This is a workaround to see which operator is present.
+        return str(self.op)
+
+    def answer(self):
+        raise NotImplementedError
+
+    def resolve(self, variable_map, lxml_etree, context_item):
+        raise NotImplementedError
+
+class UnaryOperator(Operator):
+
+    def __init__(self, operand, operator):
+        self.operand = operand
+        self.op = operator
+
+    def resolve(self, variable_map, lxml_etree, context_item):
+        """
+        Resolve parameter, path expression and context item of children
+
+        :param variable_map:
+        :param lxml_etree:
+        :param context_item:
+        :return:
+        """
+
+        if isinstance(self.operand, Function):
+            self.operand.resolve_paths(lxml_etree=lxml_etree)
+            self.operand.cast_parameters(paramlist=variable_map)
+        else:
+            print("Operand of unary operator type not known")
+
+    def answer(self):
+
+        if isinstance(self.operand, int):
+            # If the value is an int, we can just use this value
+            operand = self.operand
+
+        elif isinstance(self.operand, Operator):
+            # If the value is an Operator, we need to get to calculate its value first
+            operand = self.operand.answer()
+
+        elif isinstance(self.operand, Function):
+            # Get the value from the function
+            operand = self.operand.run()
+
+        else:
+
+            # Is an XPath expression that needs to be resolved.
+            operand = self.operand.resolve_expression()
+
+
+        if self.op == "+":
+            return + operand
+        elif self.op == "-":
+            return - operand
+        else:
+            raise("Unknown unary operator")
+
+
+class BinaryOperator(Operator):
+
+    def __init__(self, left, op, right):
+        self.left = left
+        self.op = op
+        self.right = right
+
+    def resolve(self, variable_map, lxml_etree, context_item):
+        """
+        Resolve parameter, path expression and context item of children
+
+        :param variable_map:
+        :param lxml_etree:
+        :param context_item:
+        :return:
+        """
+        print("")
+        if isinstance(self.left, Function):
+            self.left.resolve_paths(lxml_etree=lxml_etree)
+            self.left.cast_parameters(paramlist=variable_map)
+        elif isinstance(self.left, int):
+            pass
+        else:
+            print("Operand of unary operator type not known")
+
+        if isinstance(self.right, Function):
+            self.right.resolve_paths(lxml_etree=lxml_etree)
+            self.right.cast_parameters(paramlist=variable_map)
+        elif isinstance(self.right, int):
+            pass
+        else:
+            print("right Operand of binary operator type not known")
+
+    def answer(self):
+
+        if isinstance(self.left, int):
+            # If the value is an int, we can just use this value
+            left = self.left
+
+        elif isinstance(self.left, Operator):
+            # If the value is an Operator, we need to get to calculate its value first
+            left = self.left.answer()
+
+        elif isinstance(self.left, Function):
+            # Get the value from the function
+            left = self.left.run()
+
+        else:
+
+            # Is an XPath expression that needs to be resolved.
+            left = self.left.resolve_child()
+
+        if isinstance(self.right, int):
+            right = self.right
+
+        elif isinstance(self.right, Operator):
+            # If the value is an Operator, we need to get to calculate its value first
+            right = self.right.answer()
+
+        elif isinstance(self.right, Function):
+            # Get the value from the function
+            right = self.right.run()
+
+        else:
+            # Is an XPath expression that needs to be resolved.
+            right = self.right.resolve_child()
+
+
+
+        return self.op(left, right)
 
 
 def add_node(i, l_values):
@@ -21,11 +162,9 @@ def add_node(i, l_values):
     expr_left = l_values.pop(i - 1)
 
     # get the node
-    node = ast.BinOp(expr_left, op, expr_right)
+    node = BinaryOperator(expr_left, op, expr_right)
 
-    # Add node to list/tree
-    l_values.insert(i - 1, ast.fix_missing_locations(node))
-    # l_values.insert(i - 1, node)
+    l_values.insert(i - 1, node)
 
     return l_values
 
@@ -49,51 +188,119 @@ def get_nodes(l_values):
             return get_nodes(newlist)
 
 
-# Not | UAdd | USub | Invert
-unary_ops = {
-    "+": ast.UAdd(),
-    "-": ast.USub(),
-}
-
-
 def get_unary_expr(v):
-    """
-    Unary Expressions are handled weirdly in the grammar as it can have zero or more operators.
-    Right now we only give back a UnaryOp if there is one operator. Otherwise We'll not parse anything
-    and let get_additive_expr() handle it though AdditiveExpr.
 
-    :param v:
-    :return:
-    """
-    val_list = list(v)
-    if len(val_list) > 1 and val_list[0] in unary_ops.keys():
+    if len(v) > 1 and v[0] in ["+", "-"]:
 
-        # Only give back a unaryExpr if there is an actual operator being given
-        op = unary_ops[val_list[0]]
-
-        val = v[1]
-        unary_op = ast.UnaryOp(op, val)
+        unary_op = UnaryOperator(operator=v[0], operand=v[1])
         return unary_op
 
     else:
         return v
 
-
 comp_expr = {
-    "=": ast.Eq(),
-    "eq": ast.Eq(),
-    "!=": ast.NotEq(),
-    "ne": ast.NotEq(),
-    "<": ast.Lt(),
-    "lt": ast.Lt(),
-    "<=": ast.LtE(),
-    "le": ast.LtE(),
-    ">": ast.Gt(),
-    "gt": ast.Gt(),
-    ">=": ast.GtE(),
-    "ge": ast.GtE(),
+    "=": operator.is_,      # General comparison
+    "eq": operator.eq,      # value comparison
+    "!=": operator.is_not,
+    "ne": operator.ne,
+    "<": "<",
+    "lt": operator.lt,
+    "<=": "<=",
+    "le": operator.le,
+    ">": ">",
+    "gt": operator.gt,
+    ">=": ">=",
+    "ge": operator.ge,
 }
+def resolve_loop(expr, variable_map, lxml_etree, context_item):
+    if isinstance(expr, int):
+        return expr
+    elif isinstance(expr, Function):
+        # Run the function and add the outcome as a value to the operand
+        # if variable_map is not None:
+        # Cast parameters if variable map has been provided and is not None
+        expr.cast_parameters(paramlist=variable_map)
 
+
+        # if lxml_etree is not None:
+        # Resolve paths if etree is given and is not None
+        expr.resolve_paths(lxml_etree=lxml_etree)
+
+        if context_item is not None:
+            pass  # todo
+
+    elif isinstance(expr, Operator):
+        # Need to get the value of the operator
+        expr.resolve(variable_map, lxml_etree, context_item)
+
+
+
+    elif isinstance(expr, Parameter):
+        # Parameters need to be writen back
+        return expr.resolve_parameter(paramlist=variable_map)
+
+    else:
+        # Probably an XPath
+        resolve_loop(expr=expr.expr, variable_map=variable_map, lxml_etree=lxml_etree, context_item=context_item)
+
+        # Return the expression so we do not have to deal with the XPath wrapper anymore
+        return expr.expr
+
+
+class Compare:
+
+    def __init__(self, left, ops, comparators):
+        self.left = left
+
+        if len(ops) != len(comparators):
+            raise ValueError(f"Got {len(ops)} operators and {len(comparators)} comparators to compare")
+        self.ops = ops
+        self.comparators = comparators
+
+    def resolve(self, variable_map, lxml_etree, context_item):
+
+        for i, child in enumerate(self.comparators):
+            ans = resolve_loop(child, variable_map=variable_map, lxml_etree=lxml_etree, context_item=context_item)
+            if ans is not None:
+                self.comparators[i] = ans
+
+        # Do the same with the left operand
+        ans_left = resolve_loop(self.left, variable_map=variable_map, lxml_etree=lxml_etree, context_item=context_item)
+        if ans_left is not None:
+            self.left = ans_left
+
+    def answer(self):
+        """
+        Gives the anser of the Operator. If the operator contains any nested functions,
+        they will be resolved automatically.
+
+        so if isinstance(self.left, Function), this child will first be ran.
+
+        :return: Answer of operator
+        """
+        if isinstance(self.left, Function):
+            left = self.left.run()
+
+        elif isinstance(self.left, Operator):
+            # Need to get the value of the operator
+            left = self.left.answer()
+
+        else:
+            left = self.left
+
+        for i, op in enumerate(self.ops):
+
+            # Resolve function or operator if this is a nested function
+            if isinstance(self.comparators[i], Function):
+                self.comparators[i] = self.comparators[i].run()
+            elif isinstance(self.comparators[i], Operator):
+                self.comparators[i] = self.comparators[i].answer()
+
+
+            if op(left, self.comparators[i]) is False:
+                return False
+
+        return True
 
 def get_comparitive_expr(v):
     val_list = list(v)
@@ -116,9 +323,9 @@ def get_comparitive_expr(v):
 
             py_comps.append(comp)
 
-        py_compare_expr = ast.Compare(left=py_left, ops=py_ops, comparators=py_comps)
+        py_compare_expr = Compare(left=py_left, ops=py_ops, comparators=py_comps)
 
-        return ast.fix_missing_locations(py_compare_expr)
+        return py_compare_expr
     else:
         return v
 
@@ -131,13 +338,14 @@ def get_additive_expr(v):
     get_nodes(l_values)
 
     # If the final list only has one value, return that value instead of a list.
-    if len(l_values) == 1 and isinstance(l_values[0], ast.BinOp):
+
+    if len(l_values) == 1:
 
         # We expect there to be only one value, which should be a BinOp.
         l_values = l_values[0]
         return l_values
 
-    elif isinstance(l_values[0], ast.Expression):
+    elif isinstance(l_values[0], BinaryOperator):
         # If the function gets called recursively, it could happen we already created the full expression.
         # In that case, just send it though.
         return l_values[0]
