@@ -1,7 +1,8 @@
 import unittest
 import operator
-import ast
 import pyparsing
+
+from src.xpyth_parser.conversion.calculation import UnaryOperator, BinaryOperator
 from src.xpyth_parser.conversion.functions.generic import Function
 from src.xpyth_parser.conversion.qname import QName
 from src.xpyth_parser.grammar.expressions import (
@@ -9,7 +10,7 @@ from src.xpyth_parser.grammar.expressions import (
     t_UnaryExpr,
     t_AdditiveExpr,
     t_XPath,
-    t_ParenthesizedExpr,
+    t_ParenthesizedExpr, ContextItem,
 )
 from src.xpyth_parser.parse import Parser
 
@@ -28,76 +29,77 @@ class ExpressionTests(unittest.TestCase):
         )
 
         l1 = list(t_AdditiveExpr.parseString("1 + 2", parseAll=True))
-        self.assertEqual(l1[0].left.value, 1)
-        self.assertTrue(isinstance(l1[0].op, ast.Add))
-        self.assertEqual(l1[0].right.value, 2)
+        self.assertEqual(l1[0].left, 1)
+        self.assertTrue(l1[0].operator == '<built-in function add>')
+        self.assertEqual(l1[0].right, 2)
 
         # Parenthesized Expression becomes a XPath expression object
         l2 = list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True))
-        self.assertEqual(l2[0].expr.left.value, 1)
-        self.assertTrue(isinstance(l2[0].expr.op, ast.Add))
-        self.assertEqual(l2[0].expr.right.value, 2)
+        self.assertEqual(l2[0].expr.left, 1)
+        self.assertTrue(l2[0].expr.operator == '<built-in function add>')
+        self.assertEqual(l2[0].expr.right, 2)
 
         l3 = list(t_XPath.parseString("(1 + 2 * 3) * (3 - 5)", parseAll=True))[0].expr
-        self.assertEqual(l3.left.expr.left.value, 1)
-        self.assertTrue(isinstance(l3.left.expr.op, ast.Add))
+        self.assertEqual(l3.left.expr.left, 1)
+        self.assertTrue(l3.left.expr.operator == '<built-in function add>')
 
-        self.assertEqual(l3.left.expr.right.left.value, 2)
-        self.assertTrue(isinstance(l3.left.expr.right.op, ast.Mult))
-        self.assertEqual(l3.left.expr.right.right.value, 3)
+        self.assertEqual(l3.left.expr.right.left, 2)
+        self.assertTrue(l3.left.expr.right.operator == '<built-in function mul>')
+        self.assertEqual(l3.left.expr.right.right, 3)
 
-        self.assertTrue(isinstance(l3.op, ast.Mult))
-        self.assertEqual(l3.right.expr.left.value, 3)
-        self.assertTrue(isinstance(l3.right.expr.op, ast.Sub))
-        self.assertEqual(l3.right.expr.right.value, 5)
+        self.assertTrue(l3.operator == '<built-in function mul>')
+        self.assertEqual(l3.right.expr.left, 3)
+        self.assertTrue(l3.right.expr.operator == '<built-in function sub>')
+        self.assertEqual(l3.right.expr.right, 5)
 
         l4 = list(t_XPath.parseString("(2 + localname)", parseAll=True))[0].expr
-        self.assertEqual(l4.expr.left.value, 2)
-        self.assertTrue(isinstance(l4.expr.op, ast.Add))
+        self.assertEqual(l4.expr.left, 2)
+        self.assertTrue(l4.expr.operator == '<built-in function add>')
         self.assertEqual(l4.expr.right, QName(localname="localname"))
 
         # Context Item Expression
-        self.assertEqual(list(t_PrimaryExpr.parseString(".", parseAll=True)), ["."])
+        # self.assertEqual(t_PrimaryExpr.parseString(".", parseAll=True)[0], ["."])
+        self.assertTrue(isinstance(t_PrimaryExpr.parseString(".", parseAll=True)[0], ContextItem))
 
         # Function Call
         l6 = list(t_PrimaryExpr.parseString("my:function(1,2)", parseAll=True))
         self.assertTrue(isinstance(l6[0], Function))
         self.assertEqual(l6[0].qname, QName(prefix="my", localname="function"))
-        self.assertEqual(l6[0].arguments[0].value, 1)
-        self.assertEqual(l6[0].arguments[1].value, 2)
+        self.assertEqual(l6[0].arguments[0], 1)
+        self.assertEqual(l6[0].arguments[1], 2)
 
     def test_operators(self):
         """
         Test operative expressions
         """
         l1 = list(t_UnaryExpr.parseString(f"+ 1", parseAll=True))
-        self.assertTrue(isinstance(l1[0], ast.UnaryOp))
-        self.assertTrue(isinstance(l1[0].op, ast.UAdd))
-        self.assertEqual(l1[0].operand.value, 1)
+        self.assertTrue(isinstance(l1[0], UnaryOperator))
+        self.assertEqual(l1[0].op, "+")
+        self.assertEqual(l1[0].operand, 1)
 
         l2 = list(t_XPath.parseString(f"+ 1", parseAll=True))[0].expr
-        self.assertTrue(isinstance(l2, ast.UnaryOp))
-        self.assertTrue(isinstance(l2.op, ast.UAdd))
-        self.assertEqual(l2.operand.value, 1)
+        self.assertTrue(isinstance(l2, UnaryOperator))
+        self.assertEqual(l2.op, "+")
+        self.assertEqual(l2.operand, 1)
 
         l3 = list(t_UnaryExpr.parseString("+ (1 + 2)", parseAll=True))[0]
-        self.assertTrue(isinstance(l3, ast.UnaryOp))
-        self.assertTrue(isinstance(l3.op, ast.UAdd))
+        self.assertTrue(isinstance(l3, UnaryOperator))
+        self.assertEqual(l3.op, "+")
 
-        self.assertTrue(isinstance(l3.operand.expr, ast.BinOp))
-        self.assertEqual(l3.operand.expr.left.value, 1)
-        self.assertTrue(isinstance(l3.operand.expr.op, ast.Add))
-        self.assertEqual(l3.operand.expr.right.value, 2)
+        self.assertTrue(isinstance(l3.operand.expr, BinaryOperator))
+        self.assertEqual(l3.operand.expr.left, 1)
+        self.assertTrue(l3.operand.expr.operator == '<built-in function add>')
+        self.assertEqual(l3.operand.expr.right, 2)
 
         l4 = Parser("+ sum(1,3)", parseAll=True, no_resolve=True).XPath
-        self.assertTrue(isinstance(l4.expr, ast.UnaryOp))
-        self.assertTrue(isinstance(l4.expr.op, ast.UAdd))
+        self.assertTrue(isinstance(l4.expr, UnaryOperator))
+        self.assertEqual(l4.expr.op, "+")
         # The unary expression before a function should parse correctly
 
         self.assertTrue(isinstance(l4.expr.operand, Function))
         self.assertEqual(l4.expr.operand.qname, QName(prefix="fn", localname="sum"))
-        self.assertEqual(l4.expr.operand.arguments[0].value, 1)
-        self.assertEqual(l4.expr.operand.arguments[1].value, 3)
+        self.assertEqual(l4.expr.operand.arguments[0], 1)
+        self.assertEqual(l4.expr.operand.arguments[1], 3)
 
     def test_compile_arithmetic(self):
 
@@ -152,35 +154,38 @@ class ExpressionTests(unittest.TestCase):
         # Evaluate the expression
         self.assertTrue(xpath_count.run())
 
-        xpath_avg = Parser(
-            "avg($var_to_list) = $var_to_value_avg", variable_map=variable_map
+        xpath_avg_false = Parser(
+            "avg($var_to_list) = $var_to_value_avg", variable_map=variable_map, no_resolve=True
         )
-        # Loops though parsed resultes, resolves qnames from variable map
-        # xpath_avg.resolve_expression()
-        # Evaluate the expression
-        self.assertTrue(xpath_avg.run())
+
+        xpath_avg_true = Parser(
+            "avg($var_to_list) eq $var_to_value_avg", variable_map=variable_map, no_resolve=True
+        )
+
+        self.assertFalse(xpath_avg_false.run())
+        self.assertTrue(xpath_avg_true.run())
 
     def test_if_expressions(self):
         direct_xpath = t_XPath.parseString("if(1 = 1) then a else b", parseAll=True)[0]
 
-        self.assertEqual(direct_xpath.expr.test_expr.expr.left.value, 1)
-        self.assertEqual(direct_xpath.expr.test_expr.expr.comparators[0].value, 1)
-        self.assertTrue(isinstance(direct_xpath.expr.test_expr.expr.ops[0], ast.Eq))
+        self.assertEqual(direct_xpath.expr.test_expr.expr.left, 1)
+        self.assertEqual(direct_xpath.expr.test_expr.expr.comparators[0], 1)
+        self.assertTrue(str(direct_xpath.expr.test_expr.expr.ops[0]) == "<built-in function is_>")
         self.assertEqual(direct_xpath.expr.then_expr, QName(localname="a"))
         self.assertEqual(direct_xpath.expr.else_expr, QName(localname="b"))
 
-        # With the parser, the answer is automatically given.
+        # With the parser, the answer is automatically given as resolved answer
         self.assertEqual(
-            Parser("if(1 = 1) then a else b").XPath.expr, QName(localname="a")
+            Parser("if(1 = 1) then a else b").resolved_answer, QName(localname="a")
         )
         self.assertEqual(
-            Parser("if(1 = 1) then a else b").XPath.expr, QName(localname="a")
+            Parser("if(1 = 1) then a else b").resolved_answer, QName(localname="a")
         )
 
-        # Or the shorthand, get_outcome
+        # Or the shorthand, resolved_answer
         self.assertEqual(
-            Parser("if(1 = 1) then a else b").get_outcome(), QName(localname="a")
+            Parser("if(1 = 1) then a else b").resolved_answer, QName(localname="a")
         )
         self.assertEqual(
-            Parser("if(1 = 2) then a else b").get_outcome(), QName(localname="b")
+            Parser("if(1 = 2) then a else b").resolved_answer, QName(localname="b")
         )

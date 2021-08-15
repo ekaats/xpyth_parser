@@ -17,14 +17,14 @@ https://www.w3.org/TR/REC-xml-names/#ns-qualnames
 
 t_Prefix = t_NCName
 t_Prefix.setName("Prefix")
+
 t_LocalPart = t_NCName
 t_LocalPart.setName("LocalPart")
+
 t_PrefixedName = t_Prefix + Suppress(Literal(":")) + t_LocalPart
-# t_PrefixedName.addParseAction(qname_from_parse_results)
 t_PrefixedName.setName("PrefixedName")
 
 t_UnprefixedName = t_LocalPart
-# t_UnprefixedName.addParseAction(from_unprefixed_string)
 t_UnprefixedName.setName("UnprefixedName")
 
 t_QName = t_PrefixedName | t_UnprefixedName

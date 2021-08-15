@@ -5,7 +5,7 @@ class IfExpression:
         self.then_expr = then_expr
         self.else_expr = else_expr
 
-    def resolve_expression(self, test_outcome, variable_map, lxml_etree):
+    def resolve_expression(self, test_outcome):
 
         # Then and Else are both SingleExpressions
         if test_outcome is True:

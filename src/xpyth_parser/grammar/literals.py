@@ -1,4 +1,3 @@
-import ast
 
 from pyparsing import (
     Combine,
@@ -53,18 +52,10 @@ t_DoubleLiteral.addParseAction(str_to_float)
 # https://en.wikipedia.org/wiki/Parsing_expression_grammar
 
 
-def get_numeric_literal_ast(v):
-    # unparsed_num = v[0]
-
-    ast_num = ast.Constant(v[0])
-    return ast_num
-
 
 # If IntegerLiteral is checked first, a partial match would be found
 t_NumericLiteral = t_DoubleLiteral | t_DecimalLiteral | t_IntegerLiteral
 t_NumericLiteral.setName("NumericLiteral")
-t_NumericLiteral.setParseAction(get_numeric_literal_ast)
-
 
 t_EscapeQuot = Literal('""')
 t_EscapeQuot.setName("EscapedQuot")

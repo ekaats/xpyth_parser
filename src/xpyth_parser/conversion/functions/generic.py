@@ -30,14 +30,6 @@ class Function:
             f"'run' function is not implemented for Function '{self.qname.__str__()}' or function is not defined"
         )
 
-    def get_ast(self):
-        """
-        Returns a Python AST object
-
-        :return:
-        """
-        raise NotImplemented
-
     def cast_parameters(self, paramlist):
         """
         Attempt to get the value of the parameter, function or just take the int value if available.
@@ -72,8 +64,6 @@ class Function:
                 # Add this value to the list of arguments.
                 args.append(value)
 
-            # else:
-            #     print("Param type not understood")
 
         self.cast_args.extend(args)
         return args
@@ -87,7 +77,6 @@ class Function:
         """
 
         for i, arg in enumerate(self.arguments):
-            """Resolve PathExpressions and other non ast things"""
 
             if isinstance(arg, path.PathExpression):
                 if lxml_etree is None:
@@ -107,8 +96,6 @@ class Function:
                     else:
                         self.arguments[i] = resolved_args
 
-            elif isinstance(arg, Parameter):
-                pass
 
     def __repr__(self):
         if self.qname:
