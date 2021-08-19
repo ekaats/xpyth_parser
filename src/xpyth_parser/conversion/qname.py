@@ -1,5 +1,3 @@
-
-
 def qname_from_parse_results(a, string):
     """
     Return a Qname object

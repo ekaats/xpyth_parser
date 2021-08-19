@@ -1,4 +1,3 @@
-
 import operator
 
 from src.xpyth_parser.conversion.functions.generic import Function
@@ -28,8 +27,8 @@ class Operator:
     def resolve(self, variable_map, lxml_etree, context_item):
         raise NotImplementedError
 
-class UnaryOperator(Operator):
 
+class UnaryOperator(Operator):
     def __init__(self, operand, operator):
         self.operand = operand
         self.op = operator
@@ -69,17 +68,15 @@ class UnaryOperator(Operator):
             # Is an XPath expression that needs to be resolved.
             operand = self.operand.resolve_expression()
 
-
         if self.op == "+":
-            return + operand
+            return +operand
         elif self.op == "-":
-            return - operand
+            return -operand
         else:
-            raise("Unknown unary operator")
+            raise ("Unknown unary operator")
 
 
 class BinaryOperator(Operator):
-
     def __init__(self, left, op, right):
         self.left = left
         self.op = op
@@ -94,7 +91,6 @@ class BinaryOperator(Operator):
         :param context_item:
         :return:
         """
-        print("")
         if isinstance(self.left, Function):
             self.left.resolve_paths(lxml_etree=lxml_etree)
             self.left.cast_parameters(paramlist=variable_map)
@@ -144,8 +140,6 @@ class BinaryOperator(Operator):
         else:
             # Is an XPath expression that needs to be resolved.
             right = self.right.resolve_child()
-
-
 
         return self.op(left, right)
 
@@ -198,9 +192,10 @@ def get_unary_expr(v):
     else:
         return v
 
+
 comp_expr = {
-    "=": operator.is_,      # General comparison
-    "eq": operator.eq,      # value comparison
+    "=": operator.is_,  # General comparison
+    "eq": operator.eq,  # value comparison
     "!=": operator.is_not,
     "ne": operator.ne,
     "<": "<",
@@ -212,6 +207,8 @@ comp_expr = {
     ">=": ">=",
     "ge": operator.ge,
 }
+
+
 def resolve_loop(expr, variable_map, lxml_etree, context_item):
     if isinstance(expr, int):
         return expr
@@ -220,7 +217,6 @@ def resolve_loop(expr, variable_map, lxml_etree, context_item):
         # if variable_map is not None:
         # Cast parameters if variable map has been provided and is not None
         expr.cast_parameters(paramlist=variable_map)
-
 
         # if lxml_etree is not None:
         # Resolve paths if etree is given and is not None
@@ -233,39 +229,53 @@ def resolve_loop(expr, variable_map, lxml_etree, context_item):
         # Need to get the value of the operator
         expr.resolve(variable_map, lxml_etree, context_item)
 
-
-
     elif isinstance(expr, Parameter):
         # Parameters need to be writen back
         return expr.resolve_parameter(paramlist=variable_map)
 
     else:
         # Probably an XPath
-        resolve_loop(expr=expr.expr, variable_map=variable_map, lxml_etree=lxml_etree, context_item=context_item)
+        resolve_loop(
+            expr=expr.expr,
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
+            context_item=context_item,
+        )
 
         # Return the expression so we do not have to deal with the XPath wrapper anymore
         return expr.expr
 
 
 class Compare:
-
     def __init__(self, left, ops, comparators):
         self.left = left
 
         if len(ops) != len(comparators):
-            raise ValueError(f"Got {len(ops)} operators and {len(comparators)} comparators to compare")
+            raise ValueError(
+                f"Got {len(ops)} operators and {len(comparators)} comparators to compare"
+            )
         self.ops = ops
         self.comparators = comparators
 
     def resolve(self, variable_map, lxml_etree, context_item):
 
         for i, child in enumerate(self.comparators):
-            ans = resolve_loop(child, variable_map=variable_map, lxml_etree=lxml_etree, context_item=context_item)
+            ans = resolve_loop(
+                child,
+                variable_map=variable_map,
+                lxml_etree=lxml_etree,
+                context_item=context_item,
+            )
             if ans is not None:
                 self.comparators[i] = ans
 
         # Do the same with the left operand
-        ans_left = resolve_loop(self.left, variable_map=variable_map, lxml_etree=lxml_etree, context_item=context_item)
+        ans_left = resolve_loop(
+            self.left,
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
+            context_item=context_item,
+        )
         if ans_left is not None:
             self.left = ans_left
 
@@ -293,14 +303,15 @@ class Compare:
             # Resolve function or operator if this is a nested function
             if isinstance(self.comparators[i], Function):
                 self.comparators[i] = self.comparators[i].run()
+
             elif isinstance(self.comparators[i], Operator):
                 self.comparators[i] = self.comparators[i].answer()
-
 
             if op(left, self.comparators[i]) is False:
                 return False
 
         return True
+
 
 def get_comparitive_expr(v):
     val_list = list(v)

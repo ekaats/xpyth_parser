@@ -1,4 +1,3 @@
-
 from pyparsing import (
     Combine,
     Literal,
@@ -50,7 +49,6 @@ t_DoubleLiteral.addParseAction(str_to_float)
 # Order of the NumericLiteral has been changed compared to spec.
 # I think this is necessary for the PEG based PyParsing library to correctly find the type
 # https://en.wikipedia.org/wiki/Parsing_expression_grammar
-
 
 
 # If IntegerLiteral is checked first, a partial match would be found
