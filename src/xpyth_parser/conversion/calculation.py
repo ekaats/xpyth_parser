@@ -12,6 +12,18 @@ arth_ops = {
     "mod": operator.mod,
 }
 
+class SyntaxTreeNodeMixin(object):
+
+
+    def _children(self) -> list:
+        """
+        Returns list with child nodes.
+
+        """
+        raise NotImplementedError
+
+    def process_children(self):
+        raise NotImplementedError
 
 class Operator:
     pass
@@ -25,10 +37,11 @@ class Operator:
         raise NotImplementedError
 
     def resolve(self, variable_map, lxml_etree, context_item):
+
         raise NotImplementedError
 
 
-class UnaryOperator(Operator):
+class UnaryOperator(SyntaxTreeNodeMixin, Operator):
     def __init__(self, operand, operator):
         self.operand = operand
         self.op = operator
@@ -75,12 +88,35 @@ class UnaryOperator(Operator):
         else:
             raise ("Unknown unary operator")
 
+    def _children(self):
+        return [self.operand]
 
-class BinaryOperator(Operator):
+    def process_children(self):
+        new_operand = yield self.operand
+        if new_operand is not None:
+            self.operand = new_operand
+
+
+
+
+class BinaryOperator(SyntaxTreeNodeMixin, Operator):
     def __init__(self, left, op, right):
         self.left = left
         self.op = op
         self.right = right
+
+    def _children(self) -> list:
+        return [self.left, self.right]
+
+    def process_children(self):
+        new_left = yield self.left
+        if new_left is not None:
+            self.left = new_left
+
+        new_right = yield self.right
+        if new_right is not None:
+            self.right = new_right
+
 
     def resolve(self, variable_map, lxml_etree, context_item):
         """
@@ -109,7 +145,7 @@ class BinaryOperator(Operator):
 
     def answer(self):
 
-        if isinstance(self.left, int):
+        if isinstance(self.left, int) or isinstance(self.left, float):
             # If the value is an int, we can just use this value
             left = self.left
 
@@ -126,7 +162,7 @@ class BinaryOperator(Operator):
             # Is an XPath expression that needs to be resolved.
             left = self.left.resolve_child()
 
-        if isinstance(self.right, int):
+        if isinstance(self.right, int)  or isinstance(self.right, float):
             right = self.right
 
         elif isinstance(self.right, Operator):
@@ -212,6 +248,9 @@ comp_expr = {
 def resolve_loop(expr, variable_map, lxml_etree, context_item):
     if isinstance(expr, int):
         return expr
+    elif isinstance(expr, float):
+        return expr
+
     elif isinstance(expr, Function):
         # Run the function and add the outcome as a value to the operand
         # if variable_map is not None:
@@ -246,7 +285,7 @@ def resolve_loop(expr, variable_map, lxml_etree, context_item):
         return expr.expr
 
 
-class Compare:
+class Compare(SyntaxTreeNodeMixin):
     def __init__(self, left, ops, comparators):
         self.left = left
 
@@ -256,6 +295,19 @@ class Compare:
             )
         self.ops = ops
         self.comparators = comparators
+
+    def _children(self) -> list:
+        return [self.left] + self.comparators
+
+    def process_children(self):
+        new_left = yield self.left
+        if new_left is not None:
+            self.left = new_left
+
+        for i, comparator in enumerate(self.comparators):
+            new_comparator = yield comparator
+            if new_comparator is not None:
+                self.comparators[i] = new_comparator
 
     def resolve(self, variable_map, lxml_etree, context_item):
 
@@ -281,7 +333,7 @@ class Compare:
 
     def answer(self):
         """
-        Gives the anser of the Operator. If the operator contains any nested functions,
+        Gives the answer of the Operator. If the operator contains any nested functions,
         they will be resolved automatically.
 
         so if isinstance(self.left, Function), this child will first be ran.

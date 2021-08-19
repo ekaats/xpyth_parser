@@ -189,11 +189,33 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item=None):
     else:
         rootexpr = expression
 
+    # First try to get the children of the node.
+    if hasattr(rootexpr, "process_children"):
+        # resolve children of expr
+        child_generator = rootexpr.process_children()
+        for child in child_generator:
+            if isinstance(child, int):
+                # No need to resolve further
+                pass
+            else:
+                resolved_child = resolve_expression(
+                    expression=child,
+                    variable_map=variable_map,
+                    lxml_etree=lxml_etree,
+                    context_item=context_item,
+                )
+                # Return the resolved child back to the generator
+                try:
+                    child_generator.send(resolved_child)
+                except:
+                    pass
+                    # print("Couldn't give the child back to generator")
+
     if isinstance(rootexpr, Function):
         # Main node is a Function. Resolve this and add the answer to the AST.
         rootexpr = resolve_fn(rootexpr)
 
-    elif isinstance(rootexpr, BinaryOperator):
+    elif isinstance(rootexpr, Operator):
         rootexpr = rootexpr.answer()
 
     elif isinstance(rootexpr, Datatype):
