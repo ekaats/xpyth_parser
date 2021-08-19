@@ -12,6 +12,16 @@ arth_ops = {
     "mod": operator.mod,
 }
 
+class SyntaxTreeNodeMixin(object):
+
+
+    def _children(self) -> list:
+        """
+        Returns list with child nodes.
+
+        """
+        raise NotImplementedError
+
 
 class Operator:
     pass
@@ -25,10 +35,11 @@ class Operator:
         raise NotImplementedError
 
     def resolve(self, variable_map, lxml_etree, context_item):
+
         raise NotImplementedError
 
 
-class UnaryOperator(Operator):
+class UnaryOperator(SyntaxTreeNodeMixin, Operator):
     def __init__(self, operand, operator):
         self.operand = operand
         self.op = operator
@@ -75,12 +86,18 @@ class UnaryOperator(Operator):
         else:
             raise ("Unknown unary operator")
 
+    def _children(self):
+        return [self.operand]
 
-class BinaryOperator(Operator):
+
+class BinaryOperator(SyntaxTreeNodeMixin, Operator):
     def __init__(self, left, op, right):
         self.left = left
         self.op = op
         self.right = right
+
+    def _children(self) -> list:
+        return [self.left, self.right]
 
     def resolve(self, variable_map, lxml_etree, context_item):
         """
@@ -246,7 +263,7 @@ def resolve_loop(expr, variable_map, lxml_etree, context_item):
         return expr.expr
 
 
-class Compare:
+class Compare(SyntaxTreeNodeMixin):
     def __init__(self, left, ops, comparators):
         self.left = left
 
@@ -256,6 +273,9 @@ class Compare:
             )
         self.ops = ops
         self.comparators = comparators
+
+    def _children(self) -> list:
+        return [self.left] + self.comparators
 
     def resolve(self, variable_map, lxml_etree, context_item):
 

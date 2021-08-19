@@ -189,6 +189,23 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item=None):
     else:
         rootexpr = expression
 
+    if hasattr(rootexpr, "_children"):
+        # resolve children of expr
+        for child in rootexpr._children():
+            if isinstance(child, int):
+                # No need to resolve further
+                pass
+            else:
+                resolved_child = resolve_expression(
+                    expression=child,
+                    variable_map=variable_map,
+                    lxml_etree=lxml_etree,
+                    context_item=context_item,
+                )
+                # todo: Need to be able to replace child without knowing which attribute it is of rootexpr
+                child = resolved_child
+                print("")
+
     if isinstance(rootexpr, Function):
         # Main node is a Function. Resolve this and add the answer to the AST.
         rootexpr = resolve_fn(rootexpr)
