@@ -267,28 +267,13 @@ class XPath:
         self.lxml_etree = xml_etree
 
     def resolve_child(self):
-        return resolve_expression(self.expr, variable_map=self.variable_map, lxml_etree=self.lxml_etree)
-
-
-def wrap_expr(v):
-    """
-    Wraps the expression.
-
-    :param v:
-    :return:
-    """
-
-    expression = v[0]
-    # todo: This is pretty arbitrary. Expr is only part of EnclosedExpr, IfExpr, and Predicate.
-    #  on the other hand, Expr > ExprSingle > OrExpr > pretty much every single calculation.
-
-
-    return XPath(expr=expression)
-
+        return resolve_expression(
+            self.expr, variable_map=self.variable_map, lxml_etree=self.lxml_etree
+        )
 
 t_Expr = t_ExprSingle + ZeroOrMore(Literal(","), t_ExprSingle)
 t_Expr.setName("Expr")
-t_Expr.setParseAction(wrap_expr)
+t_Expr.setParseAction(lambda x: XPath(expr=x[0]))
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-ParenthesizedExpr
 
