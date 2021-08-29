@@ -53,7 +53,12 @@ class Parser:
         self.no_resolve = no_resolve
         if no_resolve is False:
             # First try and resolve the context item.
-            find_context_item(expression=self.XPath, context_item=self.context_item)
+            find_context_item(
+                expression=self.XPath,
+                variable_map=self.variable_map,
+                lxml_etree=self.lxml_etree,
+                context_item=self.context_item
+            )
 
             # Resolve parameters and path queries the of expression
             self.resolved_answer = resolve_expression(
@@ -72,7 +77,7 @@ class Parser:
             # If no_resolve was set to true, resolve now
 
             # first handle the context item
-            find_context_item(expression=self.XPath, context_item=self.context_item)
+            find_context_item(expression=self.XPath, variable_map=self.variable_map, lxml_etree=self.lxml_etree, context_item=self.context_item)
 
             answer = resolve_expression(
                 expression=self.XPath,
