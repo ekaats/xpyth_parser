@@ -27,7 +27,7 @@ from ..conversion.expressions import IfExpression
 from ..conversion.function import get_function
 from ..conversion.functions.generic import Function, Datatype
 from ..conversion.path import get_single_path_expr, get_path_expr, PathExpression
-from ..conversion.qname import Parameter
+
 
 xpath_version = "3.1"
 
