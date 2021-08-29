@@ -14,7 +14,7 @@ arth_ops = {
 
 class SyntaxTreeNodeMixin(object):
 
-
+    @property
     def _children(self) -> list:
         """
         Returns list with child nodes.
@@ -36,7 +36,7 @@ class Operator:
     def answer(self):
         raise NotImplementedError
 
-    def resolve(self, variable_map, lxml_etree, context_item):
+    def resolve(self, variable_map, lxml_etree):
 
         raise NotImplementedError
 
@@ -46,13 +46,12 @@ class UnaryOperator(SyntaxTreeNodeMixin, Operator):
         self.operand = operand
         self.op = operator
 
-    def resolve(self, variable_map, lxml_etree, context_item):
+    def resolve(self, variable_map, lxml_etree):
         """
         Resolve parameter, path expression and context item of children
 
         :param variable_map:
         :param lxml_etree:
-        :param context_item:
         :return:
         """
 
@@ -88,6 +87,7 @@ class UnaryOperator(SyntaxTreeNodeMixin, Operator):
         else:
             raise ("Unknown unary operator")
 
+    @property
     def _children(self):
         return [self.operand]
 
@@ -105,6 +105,7 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
         self.op = op
         self.right = right
 
+    @property
     def _children(self) -> list:
         return [self.left, self.right]
 
@@ -118,13 +119,12 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
             self.right = new_right
 
 
-    def resolve(self, variable_map, lxml_etree, context_item):
+    def resolve(self, variable_map, lxml_etree):
         """
         Resolve parameter, path expression and context item of children
 
         :param variable_map:
         :param lxml_etree:
-        :param context_item:
         :return:
         """
         if isinstance(self.left, Function):
@@ -245,7 +245,7 @@ comp_expr = {
 }
 
 
-def resolve_loop(expr, variable_map, lxml_etree, context_item):
+def resolve_comparator_loop(expr, variable_map, lxml_etree):
     if isinstance(expr, int):
         return expr
     elif isinstance(expr, float):
@@ -261,12 +261,9 @@ def resolve_loop(expr, variable_map, lxml_etree, context_item):
         # Resolve paths if etree is given and is not None
         expr.resolve_paths(lxml_etree=lxml_etree)
 
-        if context_item is not None:
-            pass  # todo
-
     elif isinstance(expr, Operator):
         # Need to get the value of the operator
-        expr.resolve(variable_map, lxml_etree, context_item)
+        expr.resolve(variable_map, lxml_etree)
 
     elif isinstance(expr, Parameter):
         # Parameters need to be writen back
@@ -274,11 +271,10 @@ def resolve_loop(expr, variable_map, lxml_etree, context_item):
 
     else:
         # Probably an XPath
-        resolve_loop(
+        resolve_comparator_loop(
             expr=expr.expr,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
-            context_item=context_item,
         )
 
         # Return the expression so we do not have to deal with the XPath wrapper anymore
@@ -296,6 +292,7 @@ class Compare(SyntaxTreeNodeMixin):
         self.ops = ops
         self.comparators = comparators
 
+    @property
     def _children(self) -> list:
         return [self.left] + self.comparators
 
@@ -309,24 +306,22 @@ class Compare(SyntaxTreeNodeMixin):
             if new_comparator is not None:
                 self.comparators[i] = new_comparator
 
-    def resolve(self, variable_map, lxml_etree, context_item):
+    def resolve(self, variable_map, lxml_etree):
 
         for i, child in enumerate(self.comparators):
-            ans = resolve_loop(
+            ans = resolve_comparator_loop(
                 child,
                 variable_map=variable_map,
                 lxml_etree=lxml_etree,
-                context_item=context_item,
             )
             if ans is not None:
                 self.comparators[i] = ans
 
         # Do the same with the left operand
-        ans_left = resolve_loop(
+        ans_left = resolve_comparator_loop(
             self.left,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
-            context_item=context_item,
         )
         if ans_left is not None:
             self.left = ans_left

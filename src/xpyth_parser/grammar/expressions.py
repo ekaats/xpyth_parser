@@ -158,7 +158,7 @@ def resolve_simple_expression(expression, variable_map, lxml_etree):
     return expression
 
 
-def resolve_expression(expression, variable_map, lxml_etree, context_item=None):
+def resolve_expression(expression, variable_map, lxml_etree):
     """
     Loops though parsed results and resolves qnames using the variable_map
 
@@ -202,7 +202,6 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item=None):
                     expression=child,
                     variable_map=variable_map,
                     lxml_etree=lxml_etree,
-                    context_item=context_item,
                 )
                 # Return the resolved child back to the generator
                 try:
