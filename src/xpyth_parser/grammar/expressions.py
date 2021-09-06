@@ -21,7 +21,7 @@ from ..conversion.calculation import (
     get_unary_expr,
     get_comparitive_expr,
     Operator,
-    Compare,
+    Compare, CompareValue,
 )
 from ..conversion.expressions import IfExpression
 from ..conversion.function import get_function
@@ -240,6 +240,20 @@ def find_context_item(expression, variable_map, lxml_etree, context_item):
 
                 print("")
                 context_expr = XPath(expr=context_item)
+                # A Sequence is returned
+                #  https://www.w3.org/TR/xpath-3/#id-sequence-expressions
+                # A sequence may contain duplicate items, but a sequence is never an item in another sequence.
+                # When a new sequence is created by concatenating two or more input sequences,
+                # the new sequence contains all the items of the input sequences and its length is the sum of the
+                # lengths of the input sequences.
+
+                # This should be expected for every context query
+
+                # todo: Maybe check out how LXML reals with extension functions:
+                #  https://lxml.de/extensions.html#xpath-extension-functions
+                #  I guess there it actually matters
+                #  but also with 'eq' and comparators? Xpath 1.0 only has equality comparators
+
                 child_generator.send(context_expr)
 
                 # todo: it is worse:
@@ -575,6 +589,7 @@ t_ValueComp = (
     | Keyword("ge")
 )
 t_ValueComp.setName("ValueComp")
+
 
 # Todo: Cast GeneralComp in to pythonic operators. Could we use the same as for ValueComp?
 t_GeneralComp = (

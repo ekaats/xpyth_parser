@@ -247,8 +247,15 @@ comp_expr = {
 
 def resolve_comparator_loop(expr, variable_map, lxml_etree):
     if isinstance(expr, int):
+        # Is a primary
         return expr
+
     elif isinstance(expr, float):
+        # Is a primary
+        return expr
+
+    elif isinstance(expr, list):
+        # Is a sequence with multiple values
         return expr
 
     elif isinstance(expr, Function):
@@ -282,14 +289,17 @@ def resolve_comparator_loop(expr, variable_map, lxml_etree):
 
 
 class Compare(SyntaxTreeNodeMixin):
-    def __init__(self, left, ops, comparators):
+    def __init__(self, left, op, comparators):
         self.left = left
+        #
+        # if len(op) != len(comparators):
+        #     raise ValueError(
+        #         f"Got {len(op)} operators and {len(comparators)} comparators to compare"
+        #     )
+        self.op = op
 
-        if len(ops) != len(comparators):
-            raise ValueError(
-                f"Got {len(ops)} operators and {len(comparators)} comparators to compare"
-            )
-        self.ops = ops
+        if not isinstance(comparators, list):
+            comparators = [comparators]
         self.comparators = comparators
 
     @property
@@ -345,47 +355,54 @@ class Compare(SyntaxTreeNodeMixin):
         else:
             left = self.left
 
-        for i, op in enumerate(self.ops):
+        for i, comparator in enumerate(self.comparators):
 
             # Resolve function or operator if this is a nested function
-            if isinstance(self.comparators[i], Function):
-                self.comparators[i] = self.comparators[i].run()
+            if isinstance(comparator, Function):
+                self.comparators[i] = comparator.run()
+                comparator = comparator.run()
 
-            elif isinstance(self.comparators[i], Operator):
-                self.comparators[i] = self.comparators[i].answer()
+            elif isinstance(comparator, Operator):
+                self.comparators[i] = comparator.answer()
+                comparator = comparator.answer()
 
-            if op(left, self.comparators[i]) is False:
+            if self.op(left, comparator) is False:
                 return False
 
         return True
 
 
-def get_comparitive_expr(v):
-    val_list = list(v)
+def get_comparitive_expr(toks):
+    if len(toks) > 2:
+        left = toks[0]
+        operator = toks[1]
+        comparators = toks[2]
 
-    # Put all operators in one list
-    py_ops = []
-    for val in val_list:
-        if val in comp_expr.keys():
+        # if isinstance(comparators, int) or isinstance(comparators, str):
+        #     # Wrap one element into list
+        #     comparators = [comparators]
 
-            py_ops.append(comp_expr[val])
+        # Only add a comparative expression if a comparator symbol has been found
+        if operator in comp_expr.keys():
+            py_op = comp_expr[operator]
 
-    # # Only add a comparative expression if a comparator symbol has been found
-    if len(py_ops) > 0:
+            # todo: add array as list to comparators.
+            # # Everything that isn't the first item or an op is considered a comperator
+            # comps = [v for v in toks[1:] if v not in comp_expr.keys()]
+            # py_comps = []
+            # for comp in comps:
+            #
+            #     py_comps.append(comp)
 
-        py_left = val_list[0]
-        # Everything that isn't the first item or an op is considered a comperator
-        comps = [v for v in val_list[1:] if v not in comp_expr.keys()]
-        py_comps = []
-        for comp in comps:
+            # todo: should probably leave this to the parser. But maybe there is something we'd like the check
+            if operator in ["eq", "ne", "lt", "le", "gt", "ge"]:
+                return CompareValue(left=left, op=py_op, comparators=comparators)
+            elif operator in ["=", "!=", "<", "<=", ">", ">="]:
+                return CompareGeneral(left=left, op=py_op, comparators=comparators)
+            elif operator in ["is", "<<", ">>"]:
+                return CompareNode(left=left, op=py_op, comparators=comparators)
 
-            py_comps.append(comp)
-
-        py_compare_expr = Compare(left=py_left, ops=py_ops, comparators=py_comps)
-
-        return py_compare_expr
-    else:
-        return v
+    return toks
 
 
 def get_additive_expr(v):
@@ -411,3 +428,16 @@ def get_additive_expr(v):
     else:
         # Is not a comparative expression
         return v
+
+
+class CompareValue(Compare):
+    # https://www.w3.org/TR/xpath-3/#id-value-comparisons
+    pass
+
+class CompareGeneral(Compare):
+    # https://www.w3.org/TR/xpath-3/#id-general-comparisons
+    pass
+
+class CompareNode(Compare):
+    # https://www.w3.org/TR/xpath-3/#id-node-comparisons
+    pass

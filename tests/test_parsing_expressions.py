@@ -170,7 +170,7 @@ class ExpressionTests(unittest.TestCase):
 
         self.assertEqual(direct_xpath.expr.test_expr.expr.left, 1)
         self.assertEqual(direct_xpath.expr.test_expr.expr.comparators[0], 1)
-        self.assertTrue(str(direct_xpath.expr.test_expr.expr.ops[0]) == "<built-in function is_>")
+        self.assertTrue(str(direct_xpath.expr.test_expr.expr.op) == "<built-in function is_>")
         self.assertEqual(direct_xpath.expr.then_expr, QName(localname="a"))
         self.assertEqual(direct_xpath.expr.else_expr, QName(localname="b"))
 

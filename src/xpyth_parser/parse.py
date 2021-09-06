@@ -9,7 +9,7 @@ class Parser:
         xpath_expr: str,
         parseAll: bool = True,
         variable_map: Optional[dict] = None,
-        xml: Optional[str] = None,
+        xml: Optional[bytes] = None,
         context_item: Union[str, list] = None,
         no_resolve=False,
     ):
@@ -42,6 +42,9 @@ class Parser:
         self.variable_map = variable_map if variable_map else {}
 
         self.context_item = context_item
+
+        # Set resolved_answer to None:
+        self.resolved_answer = None
 
         if xml:
             tree = etree.fromstring(xml)
