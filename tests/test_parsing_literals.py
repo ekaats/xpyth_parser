@@ -23,9 +23,7 @@ class TestLiterals(unittest.TestCase):
         """
 
         # Test directly
-        self.assertEqual(
-            t_IntegerLiteral.parseString("4362", parseAll=True)[0], 4362
-        )
+        self.assertEqual(t_IntegerLiteral.parseString("4362", parseAll=True)[0], 4362)
         self.assertEqual(
             list(t_DecimalLiteral.parseString("4362.21", parseAll=True)),
             [float(4362.21)],
@@ -43,15 +41,11 @@ class TestLiterals(unittest.TestCase):
         )
 
         # Test via NumericLiteral
-        self.assertEqual(
-            t_NumericLiteral.parseString("4362", parseAll=True)[0], 4362
-        )
+        self.assertEqual(t_NumericLiteral.parseString("4362", parseAll=True)[0], 4362)
         self.assertEqual(
             t_NumericLiteral.parseString("4362.21", parseAll=True)[0], 4362.21
         )
-        self.assertEqual(
-            t_NumericLiteral.parseString(".42", parseAll=True)[0], 0.42
-        )
+        self.assertEqual(t_NumericLiteral.parseString(".42", parseAll=True)[0], 0.42)
 
         self.assertEqual(
             t_NumericLiteral.parseString("4362.21e-3", parseAll=True)[0],

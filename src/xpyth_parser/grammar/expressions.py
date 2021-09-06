@@ -1,4 +1,3 @@
-
 from pyparsing import (
     Combine,
     Literal,
@@ -21,7 +20,8 @@ from ..conversion.calculation import (
     get_unary_expr,
     get_comparitive_expr,
     Operator,
-    Compare, CompareValue,
+    Compare,
+    CompareValue,
 )
 from ..conversion.expressions import IfExpression
 from ..conversion.function import get_function
@@ -69,7 +69,6 @@ t_QuantifiedExpr = OneOrMore(
     + t_ExprSingle
 )
 t_QuantifiedExpr.setName("QuantifiedExpr")
-
 
 
 def get_context_item(context_item, op):
@@ -182,13 +181,10 @@ def resolve_expression(expression, variable_map, lxml_etree):
 
     elif isinstance(rootexpr, Compare):
         # Pass data into the comparator
-        rootexpr.resolve(
-            variable_map=variable_map, lxml_etree=lxml_etree
-        )
+        rootexpr.resolve(variable_map=variable_map, lxml_etree=lxml_etree)
 
         # Get answer
         rootexpr = rootexpr.answer()
-
 
     # Give back the now resolved expression
     return rootexpr
@@ -207,6 +203,7 @@ class XPath:
             self.expr, variable_map=self.variable_map, lxml_etree=self.lxml_etree
         )
 
+
 t_Expr = t_ExprSingle + ZeroOrMore(Literal(","), t_ExprSingle)
 t_Expr.setName("Expr")
 t_Expr.setParseAction(lambda x: XPath(expr=x[0]))
@@ -223,6 +220,7 @@ class ContextItem:
 t_ContextItemExpr = l_dot
 t_ContextItemExpr.setName("ContextItemExpr")
 t_ContextItemExpr.setParseAction(lambda: ContextItem())
+
 
 def find_context_item(expression, variable_map, lxml_etree, context_item):
     """
@@ -259,9 +257,10 @@ def find_context_item(expression, variable_map, lxml_etree, context_item):
                 # todo: it is worse:
                 #  https://www.marklogic.com/blog/xpath-punctuation-part-1/
 
-                resolved_expr = expression.expr.resolve(variable_map=variable_map, lxml_etree=lxml_etree)
+                resolved_expr = expression.expr.resolve(
+                    variable_map=variable_map, lxml_etree=lxml_etree
+                )
                 print("")
-
 
 
 l_Forward_keywords = (
@@ -583,6 +582,7 @@ def range_expr(toks):
 
     # Don't return range if 'to' isn't found.
     return toks
+
 
 t_RangeExpr.setParseAction(range_expr)
 

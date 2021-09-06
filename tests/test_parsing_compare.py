@@ -25,6 +25,6 @@ class ComparisonTests(unittest.TestCase):
 
         self.assertTrue(Parser(f"1 != (1 + 1)").run())
         self.assertTrue(Parser(f"(1 + 2) != (1 + 1)").run())
-        self.assertTrue(Parser(f"2 = (1 + 1)").run())      # General comparison
-        self.assertTrue(Parser(f"2 eq (1 + 1)").run())      # Value comparison
+        self.assertTrue(Parser(f"2 = (1 + 1)").run())  # General comparison
+        self.assertTrue(Parser(f"2 eq (1 + 1)").run())  # Value comparison
         self.assertTrue(Parser(f"(1 + 2) = (2 + 1)").run())

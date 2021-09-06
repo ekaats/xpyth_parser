@@ -1,6 +1,3 @@
-
-
-
 class Axis:
     def __init__(self, axis, step):
 

@@ -12,8 +12,8 @@ arth_ops = {
     "mod": operator.mod,
 }
 
-class SyntaxTreeNodeMixin(object):
 
+class SyntaxTreeNodeMixin(object):
     @property
     def _children(self) -> list:
         """
@@ -24,6 +24,7 @@ class SyntaxTreeNodeMixin(object):
 
     def process_children(self):
         raise NotImplementedError
+
 
 class Operator:
     pass
@@ -97,8 +98,6 @@ class UnaryOperator(SyntaxTreeNodeMixin, Operator):
             self.operand = new_operand
 
 
-
-
 class BinaryOperator(SyntaxTreeNodeMixin, Operator):
     def __init__(self, left, op, right):
         self.left = left
@@ -117,7 +116,6 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
         new_right = yield self.right
         if new_right is not None:
             self.right = new_right
-
 
     def resolve(self, variable_map, lxml_etree):
         """
@@ -162,7 +160,7 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
             # Is an XPath expression that needs to be resolved.
             left = self.left.resolve_child()
 
-        if isinstance(self.right, int)  or isinstance(self.right, float):
+        if isinstance(self.right, int) or isinstance(self.right, float):
             right = self.right
 
         elif isinstance(self.right, Operator):
@@ -434,9 +432,11 @@ class CompareValue(Compare):
     # https://www.w3.org/TR/xpath-3/#id-value-comparisons
     pass
 
+
 class CompareGeneral(Compare):
     # https://www.w3.org/TR/xpath-3/#id-general-comparisons
     pass
+
 
 class CompareNode(Compare):
     # https://www.w3.org/TR/xpath-3/#id-node-comparisons

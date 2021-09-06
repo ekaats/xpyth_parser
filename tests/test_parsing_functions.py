@@ -1,4 +1,3 @@
-
 import unittest
 from isodate.isodates import date
 from isodate.duration import Duration
@@ -85,9 +84,7 @@ class FunctionsOperatorsSequences(unittest.TestCase):
 
         date_outcome = Parser("xs:date('2021-12-31')")
 
-
         self.assertTrue(isinstance(date_outcome.XPath.expr, Date))
-
 
         # Get the date object without having to go through the tree
         date_obj = date_outcome.resolved_answer
@@ -101,7 +98,7 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         duration_outcome = Parser("xs:yearMonthDuration('P20Y30M')")
 
         self.assertTrue(isinstance(duration_outcome.XPath.expr, YearMonthDuration))
-        self.assertEqual(duration_outcome.XPath.expr.arguments[0], 'P20Y30M')
+        self.assertEqual(duration_outcome.XPath.expr.arguments[0], "P20Y30M")
 
         # Get the date object without having to go through the tree
         daration_obj = duration_outcome.resolved_answer

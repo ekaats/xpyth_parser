@@ -10,7 +10,8 @@ from src.xpyth_parser.grammar.expressions import (
     t_UnaryExpr,
     t_AdditiveExpr,
     t_XPath,
-    t_ParenthesizedExpr, ContextItem,
+    t_ParenthesizedExpr,
+    ContextItem,
 )
 from src.xpyth_parser.parse import Parser
 
@@ -30,36 +31,38 @@ class ExpressionTests(unittest.TestCase):
 
         l1 = list(t_AdditiveExpr.parseString("1 + 2", parseAll=True))
         self.assertEqual(l1[0].left, 1)
-        self.assertTrue(l1[0].operator == '<built-in function add>')
+        self.assertTrue(l1[0].operator == "<built-in function add>")
         self.assertEqual(l1[0].right, 2)
 
         # Parenthesized Expression becomes a XPath expression object
         l2 = list(t_ParenthesizedExpr.parseString("(1 + 2)", parseAll=True))
         self.assertEqual(l2[0].expr.left, 1)
-        self.assertTrue(l2[0].expr.operator == '<built-in function add>')
+        self.assertTrue(l2[0].expr.operator == "<built-in function add>")
         self.assertEqual(l2[0].expr.right, 2)
 
         l3 = list(t_XPath.parseString("(1 + 2 * 3) * (3 - 5)", parseAll=True))[0].expr
         self.assertEqual(l3.left.expr.left, 1)
-        self.assertTrue(l3.left.expr.operator == '<built-in function add>')
+        self.assertTrue(l3.left.expr.operator == "<built-in function add>")
 
         self.assertEqual(l3.left.expr.right.left, 2)
-        self.assertTrue(l3.left.expr.right.operator == '<built-in function mul>')
+        self.assertTrue(l3.left.expr.right.operator == "<built-in function mul>")
         self.assertEqual(l3.left.expr.right.right, 3)
 
-        self.assertTrue(l3.operator == '<built-in function mul>')
+        self.assertTrue(l3.operator == "<built-in function mul>")
         self.assertEqual(l3.right.expr.left, 3)
-        self.assertTrue(l3.right.expr.operator == '<built-in function sub>')
+        self.assertTrue(l3.right.expr.operator == "<built-in function sub>")
         self.assertEqual(l3.right.expr.right, 5)
 
         l4 = list(t_XPath.parseString("(2 + localname)", parseAll=True))[0].expr
         self.assertEqual(l4.expr.left, 2)
-        self.assertTrue(l4.expr.operator == '<built-in function add>')
+        self.assertTrue(l4.expr.operator == "<built-in function add>")
         self.assertEqual(l4.expr.right, QName(localname="localname"))
 
         # Context Item Expression
         # self.assertEqual(t_PrimaryExpr.parseString(".", parseAll=True)[0], ["."])
-        self.assertTrue(isinstance(t_PrimaryExpr.parseString(".", parseAll=True)[0], ContextItem))
+        self.assertTrue(
+            isinstance(t_PrimaryExpr.parseString(".", parseAll=True)[0], ContextItem)
+        )
 
         # Function Call
         l6 = list(t_PrimaryExpr.parseString("my:function(1,2)", parseAll=True))
@@ -88,7 +91,7 @@ class ExpressionTests(unittest.TestCase):
 
         self.assertTrue(isinstance(l3.operand.expr, BinaryOperator))
         self.assertEqual(l3.operand.expr.left, 1)
-        self.assertTrue(l3.operand.expr.operator == '<built-in function add>')
+        self.assertTrue(l3.operand.expr.operator == "<built-in function add>")
         self.assertEqual(l3.operand.expr.right, 2)
 
         l4 = Parser("+ sum(1,3)", parseAll=True, no_resolve=True).XPath
@@ -155,11 +158,15 @@ class ExpressionTests(unittest.TestCase):
         self.assertTrue(xpath_count.run())
 
         xpath_avg_false = Parser(
-            "avg($var_to_list) = $var_to_value_avg", variable_map=variable_map, no_resolve=True
+            "avg($var_to_list) = $var_to_value_avg",
+            variable_map=variable_map,
+            no_resolve=True,
         )
 
         xpath_avg_true = Parser(
-            "avg($var_to_list) eq $var_to_value_avg", variable_map=variable_map, no_resolve=True
+            "avg($var_to_list) eq $var_to_value_avg",
+            variable_map=variable_map,
+            no_resolve=True,
         )
 
         self.assertFalse(xpath_avg_false.run())
@@ -170,7 +177,9 @@ class ExpressionTests(unittest.TestCase):
 
         self.assertEqual(direct_xpath.expr.test_expr.expr.left, 1)
         self.assertEqual(direct_xpath.expr.test_expr.expr.comparators[0], 1)
-        self.assertTrue(str(direct_xpath.expr.test_expr.expr.op) == "<built-in function is_>")
+        self.assertTrue(
+            str(direct_xpath.expr.test_expr.expr.op) == "<built-in function is_>"
+        )
         self.assertEqual(direct_xpath.expr.then_expr, QName(localname="a"))
         self.assertEqual(direct_xpath.expr.else_expr, QName(localname="b"))
 
@@ -191,10 +200,5 @@ class ExpressionTests(unittest.TestCase):
         )
 
     def test_range_expression(self):
-        self.assertEqual(
-            Parser("1 to 100").resolved_answer, range(1, 100)
-        )
-        self.assertEqual(
-            Parser("(1 to 100)").resolved_answer, range(1, 100)
-        )
-
+        self.assertEqual(Parser("1 to 100").resolved_answer, range(1, 100))
+        self.assertEqual(Parser("(1 to 100)").resolved_answer, range(1, 100))
