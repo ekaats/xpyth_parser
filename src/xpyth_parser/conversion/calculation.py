@@ -1,7 +1,7 @@
 import operator
 
-from src.xpyth_parser.conversion.functions.generic import Function
-from src.xpyth_parser.conversion.qname import Parameter
+from .functions.generic import Function
+from .qname import Parameter
 
 
 arth_ops = {
