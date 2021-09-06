@@ -189,3 +189,12 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(
             Parser("if(1 = 2) then a else b").resolved_answer, QName(localname="b")
         )
+
+    def test_range_expression(self):
+        self.assertEqual(
+            Parser("1 to 100").resolved_answer, range(1, 100)
+        )
+        self.assertEqual(
+            Parser("(1 to 100)").resolved_answer, range(1, 100)
+        )
+

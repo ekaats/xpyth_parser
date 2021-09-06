@@ -313,7 +313,7 @@ class Predicate:
 
 
 def predicate(v):
-    print(f"Getting predicate: {v[0]}")
+    # print(f"Getting predicate: {v[0]}")
     return Predicate(val=v[0])
 
 
@@ -575,6 +575,17 @@ t_AdditiveExpr.setName("Additive_Expr")
 t_RangeExpr = t_AdditiveExpr + Optional(Keyword("to") + t_AdditiveExpr)
 t_RangeExpr.setName("RangeExpr")
 
+
+def range_expr(toks):
+    if len(toks) > 1:
+        if toks[1] == "to":
+            return range(toks[0], toks[2])
+
+    # Don't return range if 'to' isn't found.
+    return toks
+
+t_RangeExpr.setParseAction(range_expr)
+
 """ end Arithmetic Expressions"""
 
 
@@ -591,7 +602,6 @@ t_ValueComp = (
 t_ValueComp.setName("ValueComp")
 
 
-# Todo: Cast GeneralComp in to pythonic operators. Could we use the same as for ValueComp?
 t_GeneralComp = (
     Literal("=")
     | Literal("!=")
