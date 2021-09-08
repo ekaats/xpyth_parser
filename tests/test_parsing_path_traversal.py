@@ -1,5 +1,5 @@
 import unittest
-
+import os
 from src.xpyth_parser.conversion.qname import QName
 from src.xpyth_parser.conversion.tests import Test
 from src.xpyth_parser.grammar.expressions import (
@@ -104,8 +104,9 @@ class PathTraversalTests(unittest.TestCase):
         )
 
     def test_path_instance(self):
+        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), "input/instance.xml")
 
-        with open("./input/instance.xml") as xml_file:
+        with open(TESTDATA_FILENAME) as xml_file:
             xml_bytes = bytes(xml_file.read(), encoding="utf-8")
 
             self.assertEqual(
