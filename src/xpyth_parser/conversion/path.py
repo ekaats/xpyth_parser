@@ -1,7 +1,3 @@
-# # todo: temporary flag for
-# direct_parse = True
-
-
 class Axis:
     def __init__(self, axis, step):
 
@@ -17,7 +13,6 @@ def get_single_path_expr(v):
     if len(v) == 2:
         return Axis(axis=v[0], step=v[1])
     else:
-        print("")
         return v
 
 

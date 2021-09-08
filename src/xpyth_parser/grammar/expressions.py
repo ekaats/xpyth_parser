@@ -1,6 +1,3 @@
-
-import operator
-
 from pyparsing import (
     Combine,
     Literal,
@@ -21,13 +18,16 @@ from .tests import t_KindTest, t_NodeTest
 from ..conversion.calculation import (
     get_additive_expr,
     get_unary_expr,
-    get_comparitive_expr, BinaryOperator, Compare,
+    get_comparitive_expr,
+    Operator,
+    Compare,
+    CompareValue,
 )
 from ..conversion.expressions import IfExpression
 from ..conversion.function import get_function
 from ..conversion.functions.generic import Function, Datatype
 from ..conversion.path import get_single_path_expr, get_path_expr, PathExpression
-from ..conversion.qname import Parameter
+
 
 xpath_version = "3.1"
 
@@ -71,94 +71,25 @@ t_QuantifiedExpr = OneOrMore(
 t_QuantifiedExpr.setName("QuantifiedExpr")
 
 
-def resolve_simple_expression(expression, variable_map, lxml_etree):
+def get_context_item(context_item, op):
     """
-    Resolve simple expressions (ExprSingle in grammar)
+    Takes the context item and returns an AST element based on the operator
 
-    :param expression:
-    :param variable_map:
-    :param lxml_etree:
+    :param context_item:
+    :param op:
     :return:
     """
 
-    def resolve_fn(fn):
-        """
-        Wrapper function to run Functions
-        :param fn:
-        :return:
-        """
-
-        fn.resolve_paths(lxml_etree=lxml_etree)
-        fn.cast_parameters(paramlist=variable_map)
-
-        # Then get the value by running the function
-        value = fn.run()
-
-        # Put the output value of the function into the tree as a number
-        return value
+    if isinstance(context_item, str):
+        return context_item
+    elif isinstance(context_item, int):
+        return context_item
+    elif isinstance(context_item, list):
+        # todo: cannot diferentiate between value and general comparison because both are cast to ast.eq :S
+        pass
 
 
-    for node in expression:
-        if hasattr(node, "comparators"):
-
-            """Go through comparators and replace these with AST nodes based on the variable map"""
-            for i, comparator in enumerate(node.comparators):
-                if isinstance(comparator, Parameter):
-                    # Recast the parameter based on information from the variable_map
-                    comparator = comparator.get_ast_node(variable_map)
-                    node.comparators[i] = comparator
-                elif isinstance(comparator, XPath):
-                    # Need to recursively run the child
-                    # Pass information to child
-
-                    resolved_child_expr = resolve_expression(
-                        expression=comparator,
-                        variable_map=variable_map,
-                        lxml_etree=lxml_etree,
-                    )
-                    node.comparators[i] = resolved_child_expr
-
-        if hasattr(node, "values"):
-
-            for i, value in enumerate(node.values):
-                if isinstance(value, Parameter):
-                    # Recast the parameter based on information from the variable_map
-                    value = value.get_ast_node(variable_map)
-                    node.values[i] = value
-
-                elif isinstance(value, Function):
-                    node.values[i] = resolve_fn(value)
-
-        if hasattr(node, "operand"):
-
-            # First cast parameters based on variable map
-            if isinstance(node.operand, Function):
-                # Run the function and add the outcome as a value to the operand
-                node.operand = resolve_fn(node.operand)
-
-        if hasattr(node, "left"):
-            if isinstance(node.left, Function):
-                node.left = resolve_fn(node.left)
-            elif isinstance(node.left, XPath):
-                node.left = resolve_expression(
-                    expression=node.left,
-                    variable_map=variable_map,
-                    lxml_etree=lxml_etree,
-                )
-
-        if hasattr(node, "right"):
-            if isinstance(node.right, Function):
-                node.right = resolve_fn(node.right)
-            elif isinstance(node.right, XPath):
-                node.right = resolve_expression(
-                    expression=node.right,
-                    variable_map=variable_map,
-                    lxml_etree=lxml_etree,
-                )
-    return expression
-
-
-def resolve_expression(expression, variable_map, lxml_etree, context_item=None):
+def resolve_expression(expression, variable_map, lxml_etree):
     """
     Loops though parsed results and resolves qnames using the variable_map
 
@@ -189,11 +120,32 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item=None):
     else:
         rootexpr = expression
 
+    # First try to get the children of the node.
+    if hasattr(rootexpr, "process_children"):
+        # resolve children of expr
+        child_generator = rootexpr.process_children()
+        for child in child_generator:
+            if isinstance(child, int):
+                # No need to resolve further
+                pass
+            else:
+                resolved_child = resolve_expression(
+                    expression=child,
+                    variable_map=variable_map,
+                    lxml_etree=lxml_etree,
+                )
+                # Return the resolved child back to the generator
+                try:
+                    child_generator.send(resolved_child)
+                except:
+                    pass
+                    # print("Couldn't give the child back to generator")
+
     if isinstance(rootexpr, Function):
         # Main node is a Function. Resolve this and add the answer to the AST.
         rootexpr = resolve_fn(rootexpr)
 
-    elif isinstance(rootexpr, BinaryOperator):
+    elif isinstance(rootexpr, Operator):
         rootexpr = rootexpr.answer()
 
     elif isinstance(rootexpr, Datatype):
@@ -207,17 +159,17 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item=None):
             expression=rootexpr.test_expr,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
-            context_item=context_item
         )
         rootexpr = rootexpr.resolve_expression(test_outcome=outcome_of_test)
-
 
     elif isinstance(rootexpr, XPath):
         # Need to recursively run the child
 
         # Resolve the expression and substitute the expression for the answer
         resolved_expr = resolve_expression(
-            expression=rootexpr, variable_map=variable_map, lxml_etree=lxml_etree, context_item=context_item
+            expression=rootexpr,
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
         )
         rootexpr = resolved_expr
 
@@ -227,10 +179,12 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item=None):
         # if resolved_expr is not None:
         rootexpr = resolved_expr
 
-    else:
-        expression.expr = resolve_simple_expression(
-            expression=expression.expr, variable_map=variable_map, lxml_etree=lxml_etree
-        )
+    elif isinstance(rootexpr, Compare):
+        # Pass data into the comparator
+        rootexpr.resolve(variable_map=variable_map, lxml_etree=lxml_etree)
+
+        # Get answer
+        rootexpr = rootexpr.answer()
 
     # Give back the now resolved expression
     return rootexpr
@@ -245,35 +199,69 @@ class XPath:
         self.lxml_etree = xml_etree
 
     def resolve_child(self):
-        return resolve_expression(self.expr, variable_map=self.variable_map, lxml_etree=self.lxml_etree)
-
-
-def wrap_expr(v):
-    """
-    Wraps the expression.
-
-    :param v:
-    :return:
-    """
-
-    expression = v[0]
-    # todo: This is pretty arbitrary. Expr is only part of EnclosedExpr, IfExpr, and Predicate.
-    #  on the other hand, Expr > ExprSingle > OrExpr > pretty much every single calculation.
-
-
-    return XPath(expr=expression)
+        return resolve_expression(
+            self.expr, variable_map=self.variable_map, lxml_etree=self.lxml_etree
+        )
 
 
 t_Expr = t_ExprSingle + ZeroOrMore(Literal(","), t_ExprSingle)
 t_Expr.setName("Expr")
-t_Expr.setParseAction(wrap_expr)
+t_Expr.setParseAction(lambda x: XPath(expr=x[0]))
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-ParenthesizedExpr
 
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-ContextItemExpr
+class ContextItem:
+    def __init__(self):
+        self.value = None
+
+
 t_ContextItemExpr = l_dot
 t_ContextItemExpr.setName("ContextItemExpr")
+t_ContextItemExpr.setParseAction(lambda: ContextItem())
+
+
+def find_context_item(expression, variable_map, lxml_etree, context_item):
+    """
+    Attempts to find the context item in the grammar tree
+
+    :param expression:
+    :return:
+    """
+
+    if hasattr(expression.expr, "process_children"):
+        child_generator = expression.expr.process_children()
+        for child in child_generator:
+            if isinstance(child, ContextItem):
+                # The expression has a context item. So we should first resolve this one.
+
+                print("")
+                context_expr = XPath(expr=context_item)
+                # A Sequence is returned
+                #  https://www.w3.org/TR/xpath-3/#id-sequence-expressions
+                # A sequence may contain duplicate items, but a sequence is never an item in another sequence.
+                # When a new sequence is created by concatenating two or more input sequences,
+                # the new sequence contains all the items of the input sequences and its length is the sum of the
+                # lengths of the input sequences.
+
+                # This should be expected for every context query
+
+                # todo: Maybe check out how LXML reals with extension functions:
+                #  https://lxml.de/extensions.html#xpath-extension-functions
+                #  I guess there it actually matters
+                #  but also with 'eq' and comparators? Xpath 1.0 only has equality comparators
+
+                child_generator.send(context_expr)
+
+                # todo: it is worse:
+                #  https://www.marklogic.com/blog/xpath-punctuation-part-1/
+
+                resolved_expr = expression.expr.resolve(
+                    variable_map=variable_map, lxml_etree=lxml_etree
+                )
+                print("")
+
 
 l_Forward_keywords = (
     Keyword("child")
@@ -324,7 +312,7 @@ class Predicate:
 
 
 def predicate(v):
-    print(f"Getting predicate: {v[0]}")
+    # print(f"Getting predicate: {v[0]}")
     return Predicate(val=v[0])
 
 
@@ -586,6 +574,18 @@ t_AdditiveExpr.setName("Additive_Expr")
 t_RangeExpr = t_AdditiveExpr + Optional(Keyword("to") + t_AdditiveExpr)
 t_RangeExpr.setName("RangeExpr")
 
+
+def range_expr(toks):
+    if len(toks) > 1:
+        if toks[1] == "to":
+            return range(toks[0], toks[2])
+
+    # Don't return range if 'to' isn't found.
+    return toks
+
+
+t_RangeExpr.setParseAction(range_expr)
+
 """ end Arithmetic Expressions"""
 
 
@@ -601,7 +601,7 @@ t_ValueComp = (
 )
 t_ValueComp.setName("ValueComp")
 
-# Todo: Cast GeneralComp in to pythonic operators. Could we use the same as for ValueComp?
+
 t_GeneralComp = (
     Literal("=")
     | Literal("!=")
@@ -636,8 +636,8 @@ elif xpath_version == "3.1":
 
 """ end Comparison expressions"""
 
-class AndComparison:
 
+class AndComparison:
     def __init__(self, values):
         self.values = values
 
@@ -647,6 +647,7 @@ class AndComparison:
             if value is False:
                 return False
         return True
+
 
 class OrComparison:
     def __init__(self, values):
@@ -658,6 +659,7 @@ class OrComparison:
             if value is True:
                 return True
         return False
+
 
 def get_and(v):
     if len(v) > 1:

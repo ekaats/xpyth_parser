@@ -1,4 +1,3 @@
-
 from .generic import Function
 from ..qname import Parameter
 

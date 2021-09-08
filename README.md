@@ -13,6 +13,8 @@ The original plan was to support both options. However, XPath 2.0 and 3.1 is not
 Parsing XPath 3.1 on a grammar level should still be supported, but not all information may be available when using
 the abstraction layer. Most importantly, there will be [XPath functions](https://www.w3.org/2005/xpath-functions/) missing.
 
+Dealing with dynamic contexts (i.e., parsing XML as Parser.xml will be done using LXML for now).
+
 ### Alternatives
 For most use cases, there will be (better) alternatives to this project. [LXML](https://lxml.de/) is Pythonic binding
 for the C libraries libxml2 and libxslt. If only XPath 1.0 is needed, LXML will be a better solution.
@@ -26,15 +28,15 @@ Because of this, the author of this library is focussing on correctly interpreti
 
 # Examples
 
-Parse a string using Pyparsing
+from xpyth_parser.parse import Parser
+count = Parser("count(1,2,3)")
 
-    count = t_XPath.parseString("count(1,2,3)", parseAll=True)[0]
+This will give a wrapper class which contains the resolved syntax tree in count.XPath and the answer in count.resolved_answer
 
-This returns a Python function which can be used elsewhere
-The function contains the QName which identifies the function, as well as the arguments
+## No resolve
+It is also possible to only parse the string, but not try to resolve the static and dynamic context
+count = Parser("count(1,2,3), no_resolve=True")
 
-   count -> Count(qname=QName(localname="count"), arguments=(1,2,3))
+count.xpath will be the full syntax tree, instead of having functions processed and contexts applied.
+count.run() will resolve the expression as if no_resolve=False. contexts might need to be passed to the object beforehand.
 
-Functions can have a run() function which returns a value as described in the Xpath functions document.
-
-    count.run() -> 3

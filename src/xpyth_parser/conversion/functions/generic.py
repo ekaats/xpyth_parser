@@ -64,7 +64,6 @@ class Function:
                 # Add this value to the list of arguments.
                 args.append(value)
 
-
         self.cast_args.extend(args)
         return args
 
@@ -95,7 +94,6 @@ class Function:
                         # If a single value has been returned, we can just replace the parameter
                     else:
                         self.arguments[i] = resolved_args
-
 
     def __repr__(self):
         if self.qname:
