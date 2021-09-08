@@ -37,4 +37,7 @@ jobs:
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Run Test
       run: |
-        python -m unittest discover tests -s /home/runner/work/xpyth_parser/xpyth_parser/tests -t /home/runner/work/xpyth_parser/xpyth_parser
+        python -m unittest discover tests -s /home/runner/work/xpyth_parser/xpyth_parser/tests -t /home/runner/work/xpyth_parser/xpyth_parser/tests
+
+        # This works to run tests, but test data is not found correctly
+        # python -m unittest discover tests -s /home/runner/work/xpyth_parser/xpyth_parser/tests -t /home/runner/work/xpyth_parser/xpyth_parser
