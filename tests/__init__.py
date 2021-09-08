@@ -1,2 +1,2 @@
 import sys
-sys.path.append("/home/runner/work/xpyth_parser/xpyth_parser/src")
+sys.path.append("/home/runner/work/xpyth_parser/src")
