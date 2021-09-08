@@ -105,7 +105,7 @@ class PathTraversalTests(unittest.TestCase):
 
     def test_path_instance(self):
 
-        with open("input/instance.xml") as xml_file:
+        with open("./input/instance.xml") as xml_file:
             xml_bytes = bytes(xml_file.read(), encoding="utf-8")
 
             self.assertEqual(
