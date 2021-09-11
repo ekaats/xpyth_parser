@@ -1,6 +1,4 @@
 import unittest
-import operator
-import pyparsing
 
 from src.xpyth_parser.conversion.calculation import UnaryOperator, BinaryOperator
 from src.xpyth_parser.conversion.functions.generic import Function

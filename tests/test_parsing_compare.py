@@ -1,5 +1,4 @@
 import unittest
-import operator
 
 from src.xpyth_parser.conversion.calculation import Compare
 from src.xpyth_parser.parse import Parser
