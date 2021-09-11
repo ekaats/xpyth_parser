@@ -71,22 +71,30 @@ t_QuantifiedExpr = OneOrMore(
 t_QuantifiedExpr.setName("QuantifiedExpr")
 
 
-def get_context_item(context_item, op):
-    """
-    Takes the context item and returns an AST element based on the operator
+class Expr:
 
-    :param context_item:
-    :param op:
-    :return:
-    """
+    def resolve_expression(self):
+        raise NotImplementedError
 
-    if isinstance(context_item, str):
-        return context_item
-    elif isinstance(context_item, int):
-        return context_item
-    elif isinstance(context_item, list):
-        # todo: cannot diferentiate between value and general comparison because both are cast to ast.eq :S
-        pass
+class IfExpression(Expr):
+    def __init__(self, test_expr, then_expr, else_expr):
+
+        self.test_expr = test_expr
+        self.then_expr = then_expr
+        self.else_expr = else_expr
+
+    def resolve_expression(self, test_outcome):
+
+        # Then and Else are both SingleExpressions
+        if test_outcome is True:
+            # Test has succeeded, so we return the 'then' ExprSingle
+
+            return_expr = self.then_expr
+        else:
+
+            return_expr = self.else_expr
+
+        return return_expr
 
 
 def resolve_expression(expression, variable_map, lxml_etree):
