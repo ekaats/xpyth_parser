@@ -104,7 +104,9 @@ class PathTraversalTests(unittest.TestCase):
         )
 
     def test_path_instance(self):
-        TESTDATA_FILENAME = os.path.join(os.path.dirname(__file__), "input/instance.xml")
+        TESTDATA_FILENAME = os.path.join(
+            os.path.dirname(__file__), "input/instance.xml"
+        )
 
         with open(TESTDATA_FILENAME) as xml_file:
             xml_bytes = bytes(xml_file.read(), encoding="utf-8")

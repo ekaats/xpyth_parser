@@ -66,9 +66,9 @@ t_QuantifiedExpr.setName("QuantifiedExpr")
 
 
 class Expr:
-
     def resolve_expression(self):
         raise NotImplementedError
+
 
 class IfExpression(Expr):
     def __init__(self, test_expr, then_expr, else_expr):
@@ -131,8 +131,6 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
     elif isinstance(rootexpr, Operator):
         rootexpr = rootexpr.answer(context_item_value=context_item_value)
 
-
-
     elif isinstance(rootexpr, Datatype):
         # Syntactically simmilar to a Function, but a datatype should not be wrapped
         pass
@@ -190,7 +188,6 @@ class XPath:
 
         self.variable_map = variable_map if variable_map else {}
         self.lxml_etree = xml_etree
-
 
     def resolve_child(self):
         return resolve_expression(
@@ -304,6 +301,7 @@ class Predicate:
     def __init__(self, val):
         self.val = val
 
+
 def predicate(v):
     # print(f"Getting predicate: {v[0]}")
     return Predicate(val=v[0])
@@ -367,7 +365,6 @@ t_PrimaryExpr.setName("PrimaryExpr")
 
 
 class PostfixExpr(Expr):
-
     def __init__(self, primary_expr, secondary=None):
         """
         A Postfix expresssion is a primary expression with either a predicate, argumentList or Lookup
@@ -384,14 +381,13 @@ class PostfixExpr(Expr):
             else:
                 self.secondary = [secondary]
 
-
     def resolve_secondary(self, variable_map, lxml_etree):
 
         for secondary in self.secondary:
             if isinstance(secondary, Predicate):
                 """
                 Here I'd want to probably run the predicate (filter) for every instance of the primary expression.
-                
+
                 That would mean: make a generator of the primary expr.
                 """
 
@@ -403,7 +399,7 @@ class PostfixExpr(Expr):
                         secondary.val,
                         variable_map=variable_map,
                         lxml_etree=lxml_etree,
-                        context_item_value=context_item
+                        context_item_value=context_item,
                     )
 
                     if ans is True:
@@ -415,9 +411,8 @@ class PostfixExpr(Expr):
                 # Lookup and arguments not yet supported
                 pass
 
-            pass # Attempt to do something with the secondary expressions
+            pass  # Attempt to do something with the secondary expressions
         pass
-
 
 
 def postfix_expr(toks):
@@ -434,6 +429,7 @@ def postfix_expr(toks):
         return PostfixExpr(toks[0], toks[1:])
 
     return toks
+
 
 if xpath_version == "2.0":
     t_FilterExpr = t_PrimaryExpr + t_PredicateList
@@ -568,6 +564,7 @@ elif xpath_version == "3.1":
 # https://www.w3.org/TR/xpath-3/#id-arithmetic
 t_UnaryExpr = ZeroOrMore(Literal("-") | Literal("+")) + t_ValueExpr
 
+
 def get_unary_expr(v):
 
     if len(v) > 1 and v[0] in ["+", "-"]:
@@ -639,7 +636,6 @@ tx_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(
 tx_MultiplicativeExpr.setName("MultiplicativeExpr")
 
 
-
 def get_nodes(l_values):
     # First loop though the whole equation and look for multiplication/dividing/modulo operators
 
@@ -657,6 +653,7 @@ def get_nodes(l_values):
             # Create a node for these
             newlist = add_node(i=i, l_values=l_values)
             return get_nodes(newlist)
+
 
 def get_additive_expr(v):
 
@@ -681,8 +678,6 @@ def get_additive_expr(v):
     else:
         # Is not a comparative expression
         return v
-
-
 
 
 t_AdditiveExpr = tx_MultiplicativeExpr + ZeroOrMore(
@@ -736,8 +731,6 @@ t_GeneralComp.setName("GeneralComp")
 
 t_NodeComp = Keyword("is") | Keyword("<<") | Keyword(">>")
 t_NodeComp.setName("NodeComp")
-
-
 
 
 class SyntaxTreeNodeMixin(object):
@@ -910,6 +903,7 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
 
         return self.op(left, right)
 
+
 arth_ops = {
     "+": operator.add,
     "-": operator.sub,
@@ -1070,6 +1064,7 @@ class Compare(SyntaxTreeNodeMixin):
 
         return True
 
+
 class CompareValue(Compare):
     # https://www.w3.org/TR/xpath-3/#id-value-comparisons
     pass
@@ -1083,7 +1078,6 @@ class CompareGeneral(Compare):
 class CompareNode(Compare):
     # https://www.w3.org/TR/xpath-3/#id-node-comparisons
     pass
-
 
 
 comp_expr = {
@@ -1100,6 +1094,7 @@ comp_expr = {
     ">=": ">=",
     "ge": operator.ge,
 }
+
 
 def get_comparitive_expr(toks):
     if len(toks) > 2:
@@ -1124,6 +1119,7 @@ def get_comparitive_expr(toks):
                 return CompareNode(left=left, op=py_op, comparators=comparators)
 
     return toks
+
 
 if xpath_version == "2.0":
     t_ComparisonExpr = t_RangeExpr + Optional(
