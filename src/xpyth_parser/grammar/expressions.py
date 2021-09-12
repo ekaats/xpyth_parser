@@ -19,8 +19,7 @@ from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_
 from .tests import t_KindTest, t_NodeTest
 
 from ..conversion.function import get_function
-from ..conversion.functions.generic import Function, Datatype
-from ..conversion.path import get_single_path_expr, get_path_expr, PathExpression
+from ..conversion.functions.generic import Function
 from ..conversion.qname import Parameter
 
 xpath_version = "3.1"
@@ -91,6 +90,49 @@ class IfExpression(Expr):
         return return_expr
 
 
+class PathExpression:
+    def __init__(self, steps):
+
+        if isinstance(steps, list):
+            self.steps = steps
+        else:
+            self.steps = [steps]
+
+    def to_str(self):
+        return_string = ""
+        for step in self.steps:
+            return_string += str(step.axis) # ex: //
+            return_string += str(step.step) # ex maindoc (qname)
+
+            for predicate in step.predicatelist:
+                return_string += f"[{str(predicate.val.expr)}]"
+
+        return return_string
+
+    def resolve_path(self, lxml_etree):
+        """
+        Attempt to resolve path queries
+
+        :param lxml_etree: LXML etree which the query is run against
+        :return:
+        """
+
+        found_values = []
+        if lxml_etree is not None:
+            query_str = self.to_str()
+            results = lxml_etree.xpath(query_str, namespaces=lxml_etree.nsmap)
+            for result in results:
+                # Try to cast the value to int if applicable.
+                try:
+                    found_values.append(int(result.text))
+                except:
+                    found_values.append(result.text)
+        else:
+            return None
+
+        return found_values
+
+
 def resolve_expression(expression, variable_map, lxml_etree, context_item_value=None):
     """
     Loops though parsed results and resolves qnames using the variable_map
@@ -130,10 +172,6 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
 
     elif isinstance(rootexpr, Operator):
         rootexpr = rootexpr.answer(context_item_value=context_item_value)
-
-    elif isinstance(rootexpr, Datatype):
-        # Syntactically simmilar to a Function, but a datatype should not be wrapped
-        pass
 
     elif isinstance(rootexpr, IfExpression):
         # Replace the if statement with its outcome
@@ -211,48 +249,6 @@ class ContextItem:
 t_ContextItemExpr = l_dot
 t_ContextItemExpr.setName("ContextItemExpr")
 t_ContextItemExpr.setParseAction(lambda: ContextItem())
-
-
-def find_context_item(expression, variable_map, lxml_etree, context_item):
-    """
-    Attempts to find the context item in the grammar tree
-
-    :param expression:
-    :return:
-    """
-
-    if hasattr(expression.expr, "process_children"):
-        child_generator = expression.expr.process_children()
-        for child in child_generator:
-            if isinstance(child, ContextItem):
-                # The expression has a context item. So we should first resolve this one.
-
-                print("")
-                context_expr = XPath(expr=context_item)
-                # A Sequence is returned
-                #  https://www.w3.org/TR/xpath-3/#id-sequence-expressions
-                # A sequence may contain duplicate items, but a sequence is never an item in another sequence.
-                # When a new sequence is created by concatenating two or more input sequences,
-                # the new sequence contains all the items of the input sequences and its length is the sum of the
-                # lengths of the input sequences.
-
-                # This should be expected for every context query
-
-                # todo: Maybe check out how LXML reals with extension functions:
-                #  https://lxml.de/extensions.html#xpath-extension-functions
-                #  I guess there it actually matters
-                #  but also with 'eq' and comparators? Xpath 1.0 only has equality comparators
-
-                child_generator.send(context_expr)
-
-                # todo: it is worse:
-                #  https://www.marklogic.com/blog/xpath-punctuation-part-1/
-
-                resolved_expr = expression.expr.resolve(
-                    variable_map=variable_map, lxml_etree=lxml_etree
-                )
-                print("")
-
 
 l_Forward_keywords = (
     Keyword("child")
@@ -452,13 +448,78 @@ elif xpath_version == "3.1":
     t_StepExpr = t_PostfixExpr | t_AxisStep
     t_StepExpr.setName("StepExpr")
 
+class Axis:
+    def __init__(self, axis, step, predicatelist=None):
+
+        self.axis = axis
+        self.step = step
+        self.predicatelist = predicatelist if predicatelist is not None else []
+
+    def __repr__(self):
+        return f"axis: {self.axis}, step:{self.step}"
+
+
+def get_single_path_expr(toks):
+
+    if len(toks) == 2:
+        return Axis(axis=toks[0], step=toks[1])
+    elif len(toks) > 2:
+        return Axis(axis=toks[0], step=toks[1], predicatelist=toks[2:])
+    else:
+        return toks
+
 
 tx_SinglePathExpr = MatchFirst(Literal("//") | Literal("/")) + t_StepExpr
-
 tx_SinglePathExpr.setParseAction(get_single_path_expr)
 
 t_RelativePathExpr = t_StepExpr + ZeroOrMore(tx_SinglePathExpr)
 t_RelativePathExpr.setName("RelativePathExpr")
+
+
+
+def get_path_expr(toks):
+    """
+
+    :param toks:
+    :return:
+    """
+    steps = []
+    if toks[0] == "/" and len(toks) == 1:
+        # https://www.w3.org/TR/xpath-3/#parse-note-leading-lone-slash
+        return "/"
+
+    elif toks[0] in ["/", "//"]:
+        first_step = Axis(axis=toks[0], step=toks[1])
+
+        if len(toks) > 2:
+            for tok in toks[2:]:
+                if isinstance(tok, Axis):
+                    steps.append(tok)
+                if isinstance(tok, Predicate):
+                    first_step.predicatelist.append(tok)
+            # If there are more then one step, add all of the steps to the list.
+        #     steps = list(toks[2:])
+        # else:
+        #     steps = []
+
+        steps.insert(0, first_step)
+
+        """
+        Dealing with abbreviated steps
+        https://www.w3.org/TR/xpath-3/#abbrev
+        """
+    elif toks[0] == "@":
+        # attribute::
+        steps.append(Axis(axis="attribute::", step=toks[1]))
+    elif toks[0] == "..":
+        # parent::node()
+        steps.append(Axis(axis="parent::node()", step=toks[1]))
+
+    else:
+        # If we didn't find anything axis-like, we probably need to return all toks
+        return toks
+
+    return PathExpression(steps=steps)
 
 
 t_PathExpr = (
@@ -850,6 +911,8 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
             self.left.cast_parameters(paramlist=variable_map)
         elif isinstance(self.left, int):
             pass
+        elif isinstance(self.left, ContextItem):
+            pass # We handle context items when needed in the loop itself.
         else:
             print("Operand of unary operator type not known")
 
@@ -858,6 +921,9 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
             self.right.cast_parameters(paramlist=variable_map)
         elif isinstance(self.right, int):
             pass
+        elif isinstance(self.left, ContextItem):
+            pass # We handle context items when needed in the loop itself.
+
         else:
             print("right Operand of binary operator type not known")
 

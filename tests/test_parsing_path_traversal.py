@@ -189,3 +189,53 @@ class PathTraversalTests(unittest.TestCase):
             self.assertTrue(
                 Parser("count(//multipleOccuringElement) eq 4", xml=xml_bytes).run()
             )
+
+    def test_predicate_paths(self):
+        TESTDATA_FILENAME = os.path.join(
+            os.path.dirname(__file__), "input/instance.xml"
+        )
+
+        with open(TESTDATA_FILENAME) as xml_file:
+            xml_bytes = bytes(xml_file.read(), encoding="utf-8")
+
+            self.assertEqual(
+                Parser("//multipleOccuringElement[1]", xml=xml_bytes).run(),
+                [44000, 1400],
+            )
+
+            self.assertEqual(
+                Parser("//multipleOccuringElement[2]", xml=xml_bytes).run(),
+                [21000, 6100],
+            )
+
+            self.assertEqual(
+                Parser(
+                    "/maindoc/nested/multipleOccuringElement[2]", xml=xml_bytes
+                ).run(),
+                [21000],
+            )
+
+            self.assertEqual(
+                Parser(
+                    "/maindoc/nested/multipleOccuringElement[1]", xml=xml_bytes
+                ).run(),
+                [44000],
+            )
+
+            self.assertEqual(
+                Parser("/maindoc/doubleOccuringElement[1]", xml=xml_bytes).run(),
+                [44000],
+            )
+
+            self.assertEqual(
+                Parser("/maindoc/multipleOccuringElement[2]", xml=xml_bytes).run(),
+                [6100],
+            )
+
+            self.assertEqual(
+                Parser(
+                    "/maindoc/doubleNested[2]/multipleDoubleOccuringElement[1]",
+                    xml=xml_bytes,
+                ).run(),
+                [24527],
+            )

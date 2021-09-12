@@ -1,14 +1,4 @@
-from .. import path
 from ..qname import Parameter
-
-
-class Datatype:
-    def __init__(self, arguments, qname, function_name=None):
-        self.arguments = arguments
-        self.qname = qname
-
-        if function_name:
-            self.function_name = function_name
 
 
 class Function:
@@ -77,7 +67,8 @@ class Function:
 
         for i, arg in enumerate(self.arguments):
 
-            if isinstance(arg, path.PathExpression):
+            if hasattr(arg, "resolve_path"):
+            # if isinstance(arg, path.PathExpression):
                 if lxml_etree is None:
                     # If there is no LXML ETree, we substitute by an empty list
                     # As we would obviously not have been able to find these elements

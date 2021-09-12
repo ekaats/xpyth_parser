@@ -7,6 +7,14 @@
         <multipleOccuringElement>44000</multipleOccuringElement>
         <multipleOccuringElement>21000</multipleOccuringElement>
     </nested>
+    <doubleNested>
+        <multipleDoubleOccuringElement>135</multipleDoubleOccuringElement>
+        <multipleDoubleOccuringElement>68843</multipleDoubleOccuringElement>
+    </doubleNested>
+    <doubleNested>
+        <multipleDoubleOccuringElement>24527</multipleDoubleOccuringElement>
+        <multipleDoubleOccuringElement>256</multipleDoubleOccuringElement>
+    </doubleNested>
     <multipleOccuringElement>1400</multipleOccuringElement>
     <multipleOccuringElement>6100</multipleOccuringElement>
 </maindoc>
