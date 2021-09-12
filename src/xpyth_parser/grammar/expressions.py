@@ -91,7 +91,7 @@ class IfExpression(Expr):
         return return_expr
 
 
-def resolve_expression(expression, variable_map, lxml_etree):
+def resolve_expression(expression, variable_map, lxml_etree, context_item_value=None):
     """
     Loops though parsed results and resolves qnames using the variable_map
 
@@ -124,58 +124,47 @@ def resolve_expression(expression, variable_map, lxml_etree):
     else:
         rootexpr = expression
 
-    # First try to get the children of the node.
-    if hasattr(rootexpr, "process_children"):
-        # resolve children of expr
-        child_generator = rootexpr.process_children()
-        for child in child_generator:
-            if isinstance(child, int):
-                # No need to resolve further
-                pass
-            else:
-                resolved_child = resolve_expression(
-                    expression=child,
-                    variable_map=variable_map,
-                    lxml_etree=lxml_etree,
-                )
-                # Return the resolved child back to the generator
-                try:
-                    child_generator.send(resolved_child)
-                except:
-                    pass
-                    # print("Couldn't give the child back to generator")
-
     if isinstance(rootexpr, Function):
-        # Main node is a Function. Resolve this and add the answer to the AST.
+        # Main node is a Function. Resolve this and add the answer to the Syntax Tree.
         rootexpr = resolve_fn(rootexpr)
 
     elif isinstance(rootexpr, Operator):
-        rootexpr = rootexpr.answer()
+        rootexpr = rootexpr.answer(context_item_value=context_item_value)
+
+
 
     elif isinstance(rootexpr, Datatype):
         # Syntactically simmilar to a Function, but a datatype should not be wrapped
         pass
 
     elif isinstance(rootexpr, IfExpression):
-
         # Replace the if statement with its outcome
+
+        # First get the outcome of the test by passing the test expression to the loop
         outcome_of_test = resolve_expression(
             expression=rootexpr.test_expr,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
         )
+        # Then, get the 'then' or 'else'  expression and continue
         rootexpr = rootexpr.resolve_expression(test_outcome=outcome_of_test)
+
+    elif isinstance(rootexpr, PostfixExpr):
+        # Need to resolve the predicate (filter), pass  arguments to the rootexpr as if it is a function or perform a lookup
+        rootexpr = rootexpr.resolve_secondary(
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
+        )
 
     elif isinstance(rootexpr, XPath):
         # Need to recursively run the child
 
         # Resolve the expression and substitute the expression for the answer
-        resolved_expr = resolve_expression(
+        rootexpr = resolve_expression(
             expression=rootexpr,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
         )
-        rootexpr = resolved_expr
 
     elif isinstance(rootexpr, PathExpression):
         # Run the path expression against the LXML etree
@@ -188,7 +177,7 @@ def resolve_expression(expression, variable_map, lxml_etree):
         rootexpr.resolve(variable_map=variable_map, lxml_etree=lxml_etree)
 
         # Get answer
-        rootexpr = rootexpr.answer()
+        rootexpr = rootexpr.answer(context_item_value=context_item_value)
 
     # Give back the now resolved expression
     return rootexpr
@@ -201,6 +190,7 @@ class XPath:
 
         self.variable_map = variable_map if variable_map else {}
         self.lxml_etree = xml_etree
+
 
     def resolve_child(self):
         return resolve_expression(
@@ -376,6 +366,75 @@ t_PrimaryExpr = (
 t_PrimaryExpr.setName("PrimaryExpr")
 
 
+class PostfixExpr(Expr):
+
+    def __init__(self, primary_expr, secondary=None):
+        """
+        A Postfix expresssion is a primary expression with either a predicate, argumentList or Lookup
+
+        :param primary_expr:
+        :param secondary:
+        """
+
+        self.expr = primary_expr
+
+        if secondary is not None:
+            if isinstance(secondary, list):
+                self.secondary = secondary
+            else:
+                self.secondary = [secondary]
+
+
+    def resolve_secondary(self, variable_map, lxml_etree):
+
+        for secondary in self.secondary:
+            if isinstance(secondary, Predicate):
+                """
+                Here I'd want to probably run the predicate (filter) for every instance of the primary expression.
+                
+                That would mean: make a generator of the primary expr.
+                """
+
+                filtered_items = []
+
+                # Try each context_item
+                for context_item in self.expr.expr:
+                    ans = resolve_expression(
+                        secondary.val,
+                        variable_map=variable_map,
+                        lxml_etree=lxml_etree,
+                        context_item_value=context_item
+                    )
+
+                    if ans is True:
+                        filtered_items.append(context_item)
+
+                # Return all items that match the predicate.
+                return filtered_items
+            else:
+                # Lookup and arguments not yet supported
+                pass
+
+            pass # Attempt to do something with the secondary expressions
+        pass
+
+
+
+def postfix_expr(toks):
+    """
+    A postfix expression is a primary expression with optionally either a predicate, argumentList or Lookup
+
+    :param toks:
+    :return:
+    """
+
+    if len(toks) > 1:
+        # We only need to create a PostfixExpr when there are secondary expressions to add.
+        # Otherwise It'll just create overhead
+        return PostfixExpr(toks[0], toks[1:])
+
+    return toks
+
 if xpath_version == "2.0":
     t_FilterExpr = t_PrimaryExpr + t_PredicateList
     t_FilterExpr.setName("FilterExpr")
@@ -392,6 +451,7 @@ elif xpath_version == "3.1":
 
     t_PostfixExpr = t_PrimaryExpr + ZeroOrMore(t_Predicate | t_ArgumentList | t_Lookup)
     t_PostfixExpr.setName("PostfixExpr")
+    t_PostfixExpr.setParseAction(postfix_expr)
 
     t_StepExpr = t_PostfixExpr | t_AxisStep
     t_StepExpr.setName("StepExpr")
@@ -507,6 +567,17 @@ elif xpath_version == "3.1":
 # Subtractor needs to be preceded with a whitespace, but is allowed to be succeeded with non-whitespace
 # https://www.w3.org/TR/xpath-3/#id-arithmetic
 t_UnaryExpr = ZeroOrMore(Literal("-") | Literal("+")) + t_ValueExpr
+
+def get_unary_expr(v):
+
+    if len(v) > 1 and v[0] in ["+", "-"]:
+
+        unary_op = UnaryOperator(operator=v[0], operand=v[1])
+        return unary_op
+
+    else:
+        return v
+
 
 t_UnaryExpr.setName("UnaryExpr")
 t_UnaryExpr.setParseAction(get_unary_expr)

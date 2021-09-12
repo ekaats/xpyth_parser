@@ -1,6 +1,6 @@
 import unittest
 
-from src.xpyth_parser.conversion.calculation import Compare
+from src.xpyth_parser.grammar.expressions import Compare
 from src.xpyth_parser.parse import Parser
 
 
