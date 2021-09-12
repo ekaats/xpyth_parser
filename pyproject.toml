@@ -1,5 +1,7 @@
 [build-system]
 requires = [
     "pyparsing",
+    "lxml",
+    "isodate",
     "setuptools>=56",
 ]

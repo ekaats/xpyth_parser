@@ -1,8 +1,5 @@
 import unittest
-import operator
-import pyparsing
 
-from src.xpyth_parser.conversion.calculation import UnaryOperator, BinaryOperator
 from src.xpyth_parser.conversion.functions.generic import Function
 from src.xpyth_parser.conversion.qname import QName
 from src.xpyth_parser.grammar.expressions import (
@@ -12,6 +9,8 @@ from src.xpyth_parser.grammar.expressions import (
     t_XPath,
     t_ParenthesizedExpr,
     ContextItem,
+    UnaryOperator,
+    BinaryOperator,
 )
 from src.xpyth_parser.parse import Parser
 
@@ -187,9 +186,6 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(
             Parser("if(1 = 1) then a else b").resolved_answer, QName(localname="a")
         )
-        self.assertEqual(
-            Parser("if(1 = 1) then a else b").resolved_answer, QName(localname="a")
-        )
 
         # Or the shorthand, resolved_answer
         self.assertEqual(
@@ -202,3 +198,10 @@ class ExpressionTests(unittest.TestCase):
     def test_range_expression(self):
         self.assertEqual(Parser("1 to 100").resolved_answer, range(1, 100))
         self.assertEqual(Parser("(1 to 100)").resolved_answer, range(1, 100))
+
+    def test_predicate(self):
+
+        self.assertEqual(
+            Parser("(1 to 100)[. mod 5 eq 0]").resolved_answer,
+            [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95],
+        )

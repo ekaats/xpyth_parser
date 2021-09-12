@@ -1,3 +1,5 @@
+import operator
+
 from pyparsing import (
     Combine,
     Literal,
@@ -15,19 +17,11 @@ from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Lit
 
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
-from ..conversion.calculation import (
-    get_additive_expr,
-    get_unary_expr,
-    get_comparitive_expr,
-    Operator,
-    Compare,
-    CompareValue,
-)
-from ..conversion.expressions import IfExpression
+
 from ..conversion.function import get_function
 from ..conversion.functions.generic import Function, Datatype
 from ..conversion.path import get_single_path_expr, get_path_expr, PathExpression
-
+from ..conversion.qname import Parameter
 
 xpath_version = "3.1"
 
@@ -71,30 +65,40 @@ t_QuantifiedExpr = OneOrMore(
 t_QuantifiedExpr.setName("QuantifiedExpr")
 
 
-def get_context_item(context_item, op):
-    """
-    Takes the context item and returns an AST element based on the operator
-
-    :param context_item:
-    :param op:
-    :return:
-    """
-
-    if isinstance(context_item, str):
-        return context_item
-    elif isinstance(context_item, int):
-        return context_item
-    elif isinstance(context_item, list):
-        # todo: cannot diferentiate between value and general comparison because both are cast to ast.eq :S
-        pass
+class Expr:
+    def resolve_expression(self):
+        raise NotImplementedError
 
 
-def resolve_expression(expression, variable_map, lxml_etree):
+class IfExpression(Expr):
+    def __init__(self, test_expr, then_expr, else_expr):
+
+        self.test_expr = test_expr
+        self.then_expr = then_expr
+        self.else_expr = else_expr
+
+    def resolve_expression(self, test_outcome):
+
+        # Then and Else are both SingleExpressions
+        if test_outcome is True:
+            # Test has succeeded, so we return the 'then' ExprSingle
+
+            return_expr = self.then_expr
+        else:
+
+            return_expr = self.else_expr
+
+        return return_expr
+
+
+def resolve_expression(expression, variable_map, lxml_etree, context_item_value=None):
     """
     Loops though parsed results and resolves qnames using the variable_map
 
     :return:
+
     """
+
     # Set variable map and lxml etree. These should not be set at this time
 
     def resolve_fn(fn):
@@ -120,58 +124,45 @@ def resolve_expression(expression, variable_map, lxml_etree):
     else:
         rootexpr = expression
 
-    # First try to get the children of the node.
-    if hasattr(rootexpr, "process_children"):
-        # resolve children of expr
-        child_generator = rootexpr.process_children()
-        for child in child_generator:
-            if isinstance(child, int):
-                # No need to resolve further
-                pass
-            else:
-                resolved_child = resolve_expression(
-                    expression=child,
-                    variable_map=variable_map,
-                    lxml_etree=lxml_etree,
-                )
-                # Return the resolved child back to the generator
-                try:
-                    child_generator.send(resolved_child)
-                except:
-                    pass
-                    # print("Couldn't give the child back to generator")
-
     if isinstance(rootexpr, Function):
-        # Main node is a Function. Resolve this and add the answer to the AST.
+        # Main node is a Function. Resolve this and add the answer to the Syntax Tree.
         rootexpr = resolve_fn(rootexpr)
 
     elif isinstance(rootexpr, Operator):
-        rootexpr = rootexpr.answer()
+        rootexpr = rootexpr.answer(context_item_value=context_item_value)
 
     elif isinstance(rootexpr, Datatype):
         # Syntactically simmilar to a Function, but a datatype should not be wrapped
         pass
 
     elif isinstance(rootexpr, IfExpression):
-
         # Replace the if statement with its outcome
+
+        # First get the outcome of the test by passing the test expression to the loop
         outcome_of_test = resolve_expression(
             expression=rootexpr.test_expr,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
         )
+        # Then, get the 'then' or 'else'  expression and continue
         rootexpr = rootexpr.resolve_expression(test_outcome=outcome_of_test)
+
+    elif isinstance(rootexpr, PostfixExpr):
+        # Need to resolve the predicate (filter), pass  arguments to the rootexpr as if it is a function or perform a lookup
+        rootexpr = rootexpr.resolve_secondary(
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
+        )
 
     elif isinstance(rootexpr, XPath):
         # Need to recursively run the child
 
         # Resolve the expression and substitute the expression for the answer
-        resolved_expr = resolve_expression(
+        rootexpr = resolve_expression(
             expression=rootexpr,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
         )
-        rootexpr = resolved_expr
 
     elif isinstance(rootexpr, PathExpression):
         # Run the path expression against the LXML etree
@@ -184,7 +175,7 @@ def resolve_expression(expression, variable_map, lxml_etree):
         rootexpr.resolve(variable_map=variable_map, lxml_etree=lxml_etree)
 
         # Get answer
-        rootexpr = rootexpr.answer()
+        rootexpr = rootexpr.answer(context_item_value=context_item_value)
 
     # Give back the now resolved expression
     return rootexpr
@@ -373,6 +364,73 @@ t_PrimaryExpr = (
 t_PrimaryExpr.setName("PrimaryExpr")
 
 
+class PostfixExpr(Expr):
+    def __init__(self, primary_expr, secondary=None):
+        """
+        A Postfix expresssion is a primary expression with either a predicate, argumentList or Lookup
+
+        :param primary_expr:
+        :param secondary:
+        """
+
+        self.expr = primary_expr
+
+        if secondary is not None:
+            if isinstance(secondary, list):
+                self.secondary = secondary
+            else:
+                self.secondary = [secondary]
+
+    def resolve_secondary(self, variable_map, lxml_etree):
+
+        for secondary in self.secondary:
+            if isinstance(secondary, Predicate):
+                """
+                Here I'd want to probably run the predicate (filter) for every instance of the primary expression.
+
+                That would mean: make a generator of the primary expr.
+                """
+
+                filtered_items = []
+
+                # Try each context_item
+                for context_item in self.expr.expr:
+                    ans = resolve_expression(
+                        secondary.val,
+                        variable_map=variable_map,
+                        lxml_etree=lxml_etree,
+                        context_item_value=context_item,
+                    )
+
+                    if ans is True:
+                        filtered_items.append(context_item)
+
+                # Return all items that match the predicate.
+                return filtered_items
+            else:
+                # Lookup and arguments not yet supported
+                pass
+
+            pass  # Attempt to do something with the secondary expressions
+        pass
+
+
+def postfix_expr(toks):
+    """
+    A postfix expression is a primary expression with optionally either a predicate, argumentList or Lookup
+
+    :param toks:
+    :return:
+    """
+
+    if len(toks) > 1:
+        # We only need to create a PostfixExpr when there are secondary expressions to add.
+        # Otherwise It'll just create overhead
+        return PostfixExpr(toks[0], toks[1:])
+
+    return toks
+
+
 if xpath_version == "2.0":
     t_FilterExpr = t_PrimaryExpr + t_PredicateList
     t_FilterExpr.setName("FilterExpr")
@@ -389,6 +447,7 @@ elif xpath_version == "3.1":
 
     t_PostfixExpr = t_PrimaryExpr + ZeroOrMore(t_Predicate | t_ArgumentList | t_Lookup)
     t_PostfixExpr.setName("PostfixExpr")
+    t_PostfixExpr.setParseAction(postfix_expr)
 
     t_StepExpr = t_PostfixExpr | t_AxisStep
     t_StepExpr.setName("StepExpr")
@@ -505,6 +564,18 @@ elif xpath_version == "3.1":
 # https://www.w3.org/TR/xpath-3/#id-arithmetic
 t_UnaryExpr = ZeroOrMore(Literal("-") | Literal("+")) + t_ValueExpr
 
+
+def get_unary_expr(v):
+
+    if len(v) > 1 and v[0] in ["+", "-"]:
+
+        unary_op = UnaryOperator(operator=v[0], operand=v[1])
+        return unary_op
+
+    else:
+        return v
+
+
 t_UnaryExpr.setName("UnaryExpr")
 t_UnaryExpr.setParseAction(get_unary_expr)
 
@@ -564,6 +635,51 @@ tx_MultiplicativeExpr = t_UnionExpr + ZeroOrMore(
 
 tx_MultiplicativeExpr.setName("MultiplicativeExpr")
 
+
+def get_nodes(l_values):
+    # First loop though the whole equation and look for multiplication/dividing/modulo operators
+
+    for i, val in enumerate(l_values):
+        if val in ["*", "div", "mod"]:
+            # if  val in [operator.mul, operator.truediv]:
+            newlist = add_node(i=i, l_values=l_values)
+            return get_nodes(newlist)
+
+    # If mul/div operators have been handled, continue on with adding and subtracting
+    for i, val in enumerate(l_values):
+        # go though list of values, try to find operators in order of precedence.
+        if val in ["+", "-"]:
+            # if  val in [operator.add, operator.sub]:
+            # Create a node for these
+            newlist = add_node(i=i, l_values=l_values)
+            return get_nodes(newlist)
+
+
+def get_additive_expr(v):
+
+    l_values = list(v)
+
+    # Loop though the equation and create a nested tree of BinOp objects
+    get_nodes(l_values)
+
+    # If the final list only has one value, return that value instead of a list.
+
+    if len(l_values) == 1:
+
+        # We expect there to be only one value, which should be a BinOp.
+        l_values = l_values[0]
+        return l_values
+
+    elif isinstance(l_values[0], BinaryOperator):
+        # If the function gets called recursively, it could happen we already created the full expression.
+        # In that case, just send it though.
+        return l_values[0]
+
+    else:
+        # Is not a comparative expression
+        return v
+
+
 t_AdditiveExpr = tx_MultiplicativeExpr + ZeroOrMore(
     t_ArithmeticAdditiveSymbol + tx_MultiplicativeExpr
 )
@@ -615,6 +731,395 @@ t_GeneralComp.setName("GeneralComp")
 
 t_NodeComp = Keyword("is") | Keyword("<<") | Keyword(">>")
 t_NodeComp.setName("NodeComp")
+
+
+class SyntaxTreeNodeMixin(object):
+    @property
+    def _children(self) -> list:
+        """
+        Returns list with child nodes.
+
+        """
+        raise NotImplementedError
+
+    def process_children(self):
+        raise NotImplementedError
+
+
+class Operator:
+    pass
+
+    @property
+    def operator(self):
+        # self.op does not show up in debugger. This is a workaround to see which operator is present.
+        return str(self.op)
+
+    def answer(self, context_item_value=None):
+        raise NotImplementedError
+
+    def resolve(self, variable_map, lxml_etree):
+
+        raise NotImplementedError
+
+
+class UnaryOperator(SyntaxTreeNodeMixin, Operator):
+    def __init__(self, operand, operator):
+        self.operand = operand
+        self.op = operator
+
+    def resolve(self, variable_map, lxml_etree):
+        """
+        Resolve parameter, path expression and context item of children
+
+        :param variable_map:
+        :param lxml_etree:
+        :return:
+        """
+
+        if isinstance(self.operand, Function):
+            self.operand.resolve_paths(lxml_etree=lxml_etree)
+            self.operand.cast_parameters(paramlist=variable_map)
+        else:
+            print("Operand of unary operator type not known")
+
+    def answer(self, context_item_value=None):
+
+        if isinstance(self.operand, int):
+            # If the value is an int, we can just use this value
+            operand = self.operand
+
+        elif isinstance(self.operand, Operator):
+            # If the value is an Operator, we need to get to calculate its value first
+            operand = self.operand.answer()
+
+        elif isinstance(self.operand, Function):
+            # Get the value from the function
+            operand = self.operand.run()
+
+        else:
+
+            # Is an XPath expression that needs to be resolved.
+            operand = self.operand.resolve_expression()
+
+        if self.op == "+":
+            return +operand
+        elif self.op == "-":
+            return -operand
+        else:
+            raise ("Unknown unary operator")
+
+    @property
+    def _children(self):
+        return [self.operand]
+
+    def process_children(self):
+        new_operand = yield self.operand
+        if new_operand is not None:
+            self.operand = new_operand
+
+
+class BinaryOperator(SyntaxTreeNodeMixin, Operator):
+    def __init__(self, left, op, right):
+        self.left = left
+        self.op = op
+        self.right = right
+
+    @property
+    def _children(self) -> list:
+        return [self.left, self.right]
+
+    def process_children(self):
+        new_left = yield self.left
+        if new_left is not None:
+            self.left = new_left
+
+        new_right = yield self.right
+        if new_right is not None:
+            self.right = new_right
+
+    def resolve(self, variable_map, lxml_etree):
+        """
+        Resolve parameter, path expression and context item of children
+
+        :param variable_map:
+        :param lxml_etree:
+        :return:
+        """
+        if isinstance(self.left, Function):
+            self.left.resolve_paths(lxml_etree=lxml_etree)
+            self.left.cast_parameters(paramlist=variable_map)
+        elif isinstance(self.left, int):
+            pass
+        else:
+            print("Operand of unary operator type not known")
+
+        if isinstance(self.right, Function):
+            self.right.resolve_paths(lxml_etree=lxml_etree)
+            self.right.cast_parameters(paramlist=variable_map)
+        elif isinstance(self.right, int):
+            pass
+        else:
+            print("right Operand of binary operator type not known")
+
+    def answer(self, context_item_value=None):
+
+        if isinstance(self.left, int) or isinstance(self.left, float):
+            # If the value is an int, we can just use this value
+            left = self.left
+
+        elif isinstance(self.left, Operator):
+            # If the value is an Operator, we need to get to calculate its value first
+            left = self.left.answer()
+
+        elif isinstance(self.left, Function):
+            # Get the value from the function
+            left = self.left.run()
+
+        elif isinstance(self.left, ContextItem):
+            left = context_item_value
+
+        else:
+
+            # Is an XPath expression that needs to be resolved.
+            left = self.left.resolve_child()
+
+        if isinstance(self.right, int) or isinstance(self.right, float):
+            right = self.right
+
+        elif isinstance(self.right, Operator):
+            # If the value is an Operator, we need to get to calculate its value first
+            right = self.right.answer()
+
+        elif isinstance(self.right, Function):
+            # Get the value from the function
+            right = self.right.run()
+
+        elif isinstance(self.right, ContextItem):
+            right = context_item_value
+
+        else:
+            # Is an XPath expression that needs to be resolved.
+            right = self.right.resolve_child()
+
+        return self.op(left, right)
+
+
+arth_ops = {
+    "+": operator.add,
+    "-": operator.sub,
+    "*": operator.mul,
+    "div": operator.truediv,
+    "mod": operator.mod,
+}
+
+
+def add_node(i, l_values):
+
+    # Take operator and expressions out of the list
+
+    expr_right = l_values.pop(i + 1)
+
+    op = l_values.pop(i)
+    op = arth_ops[op]
+
+    expr_left = l_values.pop(i - 1)
+
+    # get the node
+    node = BinaryOperator(expr_left, op, expr_right)
+
+    l_values.insert(i - 1, node)
+
+    return l_values
+
+
+def resolve_comparator_loop(expr, variable_map, lxml_etree):
+    if isinstance(expr, int):
+        # Is a primary
+        return expr
+
+    elif isinstance(expr, float):
+        # Is a primary
+        return expr
+
+    elif isinstance(expr, list):
+        # Is a sequence with multiple values
+        return expr
+
+    elif isinstance(expr, Function):
+        # Run the function and add the outcome as a value to the operand
+        # if variable_map is not None:
+        # Cast parameters if variable map has been provided and is not None
+        expr.cast_parameters(paramlist=variable_map)
+
+        # if lxml_etree is not None:
+        # Resolve paths if etree is given and is not None
+        expr.resolve_paths(lxml_etree=lxml_etree)
+
+    elif isinstance(expr, Operator):
+        # Need to get the value of the operator
+        expr.resolve(variable_map, lxml_etree)
+
+    elif isinstance(expr, Parameter):
+        # Parameters need to be writen back
+        return expr.resolve_parameter(paramlist=variable_map)
+
+    else:
+        # Probably an XPath
+        resolve_comparator_loop(
+            expr=expr.expr,
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
+        )
+
+        # Return the expression so we do not have to deal with the XPath wrapper anymore
+        return expr.expr
+
+
+class Compare(SyntaxTreeNodeMixin):
+    def __init__(self, left, op, comparators):
+        self.left = left
+        #
+        # if len(op) != len(comparators):
+        #     raise ValueError(
+        #         f"Got {len(op)} operators and {len(comparators)} comparators to compare"
+        #     )
+        self.op = op
+
+        if not isinstance(comparators, list):
+            comparators = [comparators]
+        self.comparators = comparators
+
+    @property
+    def _children(self) -> list:
+        return [self.left] + self.comparators
+
+    def process_children(self):
+        new_left = yield self.left
+        if new_left is not None:
+            self.left = new_left
+
+        for i, comparator in enumerate(self.comparators):
+            new_comparator = yield comparator
+            if new_comparator is not None:
+                self.comparators[i] = new_comparator
+
+    def resolve(self, variable_map, lxml_etree):
+
+        for i, child in enumerate(self.comparators):
+            ans = resolve_comparator_loop(
+                child,
+                variable_map=variable_map,
+                lxml_etree=lxml_etree,
+            )
+            if ans is not None:
+                self.comparators[i] = ans
+
+        # Do the same with the left operand
+        ans_left = resolve_comparator_loop(
+            self.left,
+            variable_map=variable_map,
+            lxml_etree=lxml_etree,
+        )
+        if ans_left is not None:
+            self.left = ans_left
+
+    def answer(self, context_item_value=None):
+        """
+        Gives the answer of the Operator. If the operator contains any nested functions,
+        they will be resolved automatically.
+
+        so if isinstance(self.left, Function), this child will first be ran.
+
+        :return: Answer of operator
+        """
+        if isinstance(self.left, Function):
+            left = self.left.run()
+
+        elif isinstance(self.left, Operator):
+            # Need to get the value of the operator
+            left = self.left.answer(context_item_value=context_item_value)
+
+        elif isinstance(self.left, ContextItem):
+            left = context_item_value
+
+        else:
+            left = self.left
+
+        for i, comparator in enumerate(self.comparators):
+
+            # Resolve function or operator if this is a nested function
+            if isinstance(comparator, Function):
+                self.comparators[i] = comparator.run()
+                comparator = comparator.run()
+
+            elif isinstance(comparator, Operator):
+                self.comparators[i] = comparator.answer()
+                comparator = comparator.answer()
+
+            elif isinstance(self.comparators[i], ContextItem):
+                comparator = context_item_value
+
+            if self.op(left, comparator) is False:
+                return False
+
+        return True
+
+
+class CompareValue(Compare):
+    # https://www.w3.org/TR/xpath-3/#id-value-comparisons
+    pass
+
+
+class CompareGeneral(Compare):
+    # https://www.w3.org/TR/xpath-3/#id-general-comparisons
+    pass
+
+
+class CompareNode(Compare):
+    # https://www.w3.org/TR/xpath-3/#id-node-comparisons
+    pass
+
+
+comp_expr = {
+    "=": operator.is_,  # General comparison
+    "eq": operator.eq,  # value comparison
+    "!=": operator.is_not,
+    "ne": operator.ne,
+    "<": "<",
+    "lt": operator.lt,
+    "<=": "<=",
+    "le": operator.le,
+    ">": ">",
+    "gt": operator.gt,
+    ">=": ">=",
+    "ge": operator.ge,
+}
+
+
+def get_comparitive_expr(toks):
+    if len(toks) > 2:
+        left = toks[0]
+        operator = toks[1]
+        comparators = toks[2]
+
+        # if isinstance(comparators, int) or isinstance(comparators, str):
+        #     # Wrap one element into list
+        #     comparators = [comparators]
+
+        # Only add a comparative expression if a comparator symbol has been found
+        if operator in comp_expr.keys():
+            py_op = comp_expr[operator]
+
+            # todo: should probably leave this to the parser. But maybe there is something we'd like the check
+            if operator in ["eq", "ne", "lt", "le", "gt", "ge"]:
+                return CompareValue(left=left, op=py_op, comparators=comparators)
+            elif operator in ["=", "!=", "<", "<=", ">", ">="]:
+                return CompareGeneral(left=left, op=py_op, comparators=comparators)
+            elif operator in ["is", "<<", ">>"]:
+                return CompareNode(left=left, op=py_op, comparators=comparators)
+
+    return toks
+
 
 if xpath_version == "2.0":
     t_ComparisonExpr = t_RangeExpr + Optional(

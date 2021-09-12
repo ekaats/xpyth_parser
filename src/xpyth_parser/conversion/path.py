@@ -88,6 +88,9 @@ def get_path_expr(v):
         steps.append(Axis(axis="parent::node()", step=v[1]))
 
     else:
+        # Can just be a RelativePathExpr, which can itself be a postfix expr
+        # steps.append(v[0])
+
         # If we didn't find anything axis-like, we probably need to return all toks
         return v
 
