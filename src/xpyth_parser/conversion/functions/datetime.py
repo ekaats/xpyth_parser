@@ -43,3 +43,28 @@ class YearMonthDuration(Function):
         else:
             duration = parse_duration(self.arguments[0])
             return duration
+
+
+class DayTimeDuration(Function):
+    """
+    Returns a date duration value
+    https://www.w3.org/TR/xmlschema-2/#duration
+
+    Examples of values:
+    P1Y
+    P1347Y
+    P1347M
+    P20Y30M
+    -P1347M
+    P1Y2M
+    """
+
+    def __init__(self, arguments, qname=None):
+        super().__init__(arguments, qname, function_name="daytimeduration")
+
+    def run(self):
+        if len(self.arguments) == 0:
+            return False
+        else:
+            duration = parse_duration(self.arguments[0])
+            return duration

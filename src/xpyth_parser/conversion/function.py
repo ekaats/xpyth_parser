@@ -1,5 +1,5 @@
 from .functions.aggregate import get_aggregate_function
-from .functions.datetime import Date, YearMonthDuration
+from .functions.datetime import Date, YearMonthDuration, DayTimeDuration
 from .functions.generic import Function, Not, Empty, FnQname
 
 
@@ -23,11 +23,13 @@ def get_function(v):
     elif qname.__repr__() == "fn:empty":
         return Empty(arguments=args, qname=qname)
 
-    # elif qname.localname in ["date", "yearMonthDuration"]:
+    # xs:dayTimeDuration
     elif qname.__repr__() == "xs:date":
         return Date(arguments=args, qname=qname)
     elif qname.__repr__() == "xs:yearMonthDuration":
         return YearMonthDuration(arguments=args, qname=qname)
+    elif qname.__repr__() == "xs:dayTimeDuration":
+        return DayTimeDuration(arguments=args, qname=qname)
     elif qname.__repr__() == "xs:QName":
         return FnQname(arguments=args, qname=qname)
     else:
