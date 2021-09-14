@@ -47,7 +47,7 @@ class Parser:
         # Set resolved_answer to None:
         self.resolved_answer = None
 
-        if xml:
+        if xml is not None:
             if isinstance(xml, bytes):
                 tree = etree.fromstring(xml)
             elif isinstance(xml, str):

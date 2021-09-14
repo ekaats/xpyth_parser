@@ -120,3 +120,8 @@ class FunctionsOperatorsSequences(unittest.TestCase):
                          QName(localname="localname", prefix="prefix"))
         self.assertEqual(Parser("xs:QName(\'http://example/thing\', \'prefix:localname\')").resolved_answer,
                          QName(localname="localname", prefix="prefix", namespace="http://example/thing"))
+
+    def test_number(self):
+        self.assertEqual(Parser("number(42)").resolved_answer, 42.0)
+        self.assertEqual(Parser("number(42.42)").resolved_answer, 42.42)
+        self.assertEqual(Parser("number($paramname)", variable_map={"paramname": 42.42}).resolved_answer, 42.42)

@@ -153,6 +153,22 @@ class FnQname(Function):
             prefix, localname = str(self.arguments[1]).split(":", 1)
             return QName(prefix=prefix, localname=localname, namespace=self.arguments[0])
 
+class FnNumber(Function):
+    # https://www.w3.org/TR/xpath-functions-31/#func-number
+    def __init__(self, arguments, qname=None):
+        # Returns an xs:QName value formed using a supplied namespace URI and lexical QName.
+        super().__init__(arguments, qname, function_name="qname")
+
+    def run(self):
+        # Returns an xs:QName value formed using a supplied namespace URI and lexical QName.
+        if len(self.cast_args) >= 1:
+            # Give back the already casted argument
+            return self.cast_args[0]
+        else:
+            # Otherwise try to cast the argument to float.
+            return float(self.arguments[0])
+
+
 class OrExpr:
     def __init__(self, a, b):
         self.op = "or"
