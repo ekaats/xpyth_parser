@@ -52,7 +52,7 @@ class Parser:
                 tree = etree.fromstring(xml)
             elif isinstance(xml, str):
                 tree = etree.fromstring(bytes(xml))
-                tree = xml
+
             else:
                 tree = xml
 

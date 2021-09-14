@@ -166,12 +166,33 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
     else:
         rootexpr = expression
 
+    if isinstance(rootexpr, int):
+        # Is a primary
+        return rootexpr
+
+    elif isinstance(rootexpr, str):
+        # Is a primary
+        return rootexpr
+
+    elif isinstance(rootexpr, float):
+        # Is a primary
+        return rootexpr
+
+    elif isinstance(rootexpr, list):
+        # Is a sequence with multiple values
+        return rootexpr
+
     if isinstance(rootexpr, Function):
         # Main node is a Function. Resolve this and add the answer to the Syntax Tree.
-        rootexpr = resolve_fn(rootexpr)
+        return resolve_fn(rootexpr)
+
+    elif isinstance(rootexpr, Parameter):
+        param_value = rootexpr.resolve_parameter(paramlist=variable_map)
+        return param_value
 
     elif isinstance(rootexpr, Operator):
-        rootexpr = rootexpr.answer(context_item_value=context_item_value)
+        rootexpr.resolve(variable_map, lxml_etree)
+        return rootexpr.answer(context_item_value=context_item_value)
 
     elif isinstance(rootexpr, IfExpression):
         # Replace the if statement with its outcome
@@ -183,11 +204,11 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
             lxml_etree=lxml_etree,
         )
         # Then, get the 'then' or 'else'  expression and continue
-        rootexpr = rootexpr.resolve_expression(test_outcome=outcome_of_test)
+        return rootexpr.resolve_expression(test_outcome=outcome_of_test)
 
     elif isinstance(rootexpr, PostfixExpr):
         # Need to resolve the predicate (filter), pass  arguments to the rootexpr as if it is a function or perform a lookup
-        rootexpr = rootexpr.resolve_secondary(
+        return rootexpr.resolve_secondary(
             variable_map=variable_map,
             lxml_etree=lxml_etree,
         )
@@ -196,7 +217,7 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
         # Need to recursively run the child
 
         # Resolve the expression and substitute the expression for the answer
-        rootexpr = resolve_expression(
+        return resolve_expression(
             expression=rootexpr,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
@@ -206,14 +227,17 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
         # Run the path expression against the LXML etree
         resolved_expr = rootexpr.resolve_path(lxml_etree=lxml_etree)
         # if resolved_expr is not None:
-        rootexpr = resolved_expr
+        return resolved_expr
 
     elif isinstance(rootexpr, Compare):
         # Pass data into the comparator
-        rootexpr.resolve(variable_map=variable_map, lxml_etree=lxml_etree)
+
+        if context_item_value is None:
+            # If we are not dealing with a context item, we can 'collapse' the expression
+            rootexpr.resolve(variable_map=variable_map, lxml_etree=lxml_etree, context_item_value=context_item_value)
 
         # Get answer
-        rootexpr = rootexpr.answer(context_item_value=context_item_value)
+        return rootexpr.answer(context_item_value=context_item_value)
 
     # Give back the now resolved expression
     return rootexpr
@@ -816,9 +840,22 @@ class Operator:
         return str(self.op)
 
     def answer(self, context_item_value=None):
+        """
+        Returns the answer of the operator
+
+        :param context_item_value:
+        :return:
+        """
         raise NotImplementedError
 
     def resolve(self, variable_map, lxml_etree):
+        """
+        Resolves the operator by calling the resolve_expression loop on its children
+
+        :param variable_map:
+        :param lxml_etree:
+        :return:
+        """
 
         raise NotImplementedError
 
@@ -909,23 +946,23 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
         if isinstance(self.left, Function):
             self.left.resolve_paths(lxml_etree=lxml_etree)
             self.left.cast_parameters(paramlist=variable_map)
-        elif isinstance(self.left, int):
-            pass
-        elif isinstance(self.left, ContextItem):
-            pass # We handle context items when needed in the loop itself.
-        else:
-            print("Operand of unary operator type not known")
+        # elif isinstance(self.left, int):
+        #     pass
+        # elif isinstance(self.left, ContextItem):
+        #     pass # We handle context items when needed in the loop itself.
+        # else:
+        #     print("Operand of unary operator type not known")
 
         if isinstance(self.right, Function):
             self.right.resolve_paths(lxml_etree=lxml_etree)
             self.right.cast_parameters(paramlist=variable_map)
-        elif isinstance(self.right, int):
-            pass
-        elif isinstance(self.left, ContextItem):
-            pass # We handle context items when needed in the loop itself.
+        # elif isinstance(self.right, int):
+        #     pass
+        # elif isinstance(self.left, ContextItem):
+        #     pass # We handle context items when needed in the loop itself.
 
-        else:
-            print("right Operand of binary operator type not known")
+        # else:
+        #     print("right Operand of binary operator type not known")
 
     def answer(self, context_item_value=None):
 
@@ -998,49 +1035,6 @@ def add_node(i, l_values):
     return l_values
 
 
-def resolve_comparator_loop(expr, variable_map, lxml_etree):
-    if isinstance(expr, int):
-        # Is a primary
-        return expr
-
-    elif isinstance(expr, float):
-        # Is a primary
-        return expr
-
-    elif isinstance(expr, list):
-        # Is a sequence with multiple values
-        return expr
-
-    elif isinstance(expr, Function):
-        # Run the function and add the outcome as a value to the operand
-        # if variable_map is not None:
-        # Cast parameters if variable map has been provided and is not None
-        expr.cast_parameters(paramlist=variable_map)
-
-        # if lxml_etree is not None:
-        # Resolve paths if etree is given and is not None
-        expr.resolve_paths(lxml_etree=lxml_etree)
-
-    elif isinstance(expr, Operator):
-        # Need to get the value of the operator
-        expr.resolve(variable_map, lxml_etree)
-
-    elif isinstance(expr, Parameter):
-        # Parameters need to be writen back
-        return expr.resolve_parameter(paramlist=variable_map)
-
-    else:
-        # Probably an XPath
-        resolve_comparator_loop(
-            expr=expr.expr,
-            variable_map=variable_map,
-            lxml_etree=lxml_etree,
-        )
-
-        # Return the expression so we do not have to deal with the XPath wrapper anymore
-        return expr.expr
-
-
 class Compare(SyntaxTreeNodeMixin):
     def __init__(self, left, op, comparators):
         self.left = left
@@ -1069,22 +1063,24 @@ class Compare(SyntaxTreeNodeMixin):
             if new_comparator is not None:
                 self.comparators[i] = new_comparator
 
-    def resolve(self, variable_map, lxml_etree):
+    def resolve(self, variable_map, lxml_etree, context_item_value):
 
         for i, child in enumerate(self.comparators):
-            ans = resolve_comparator_loop(
+            ans = resolve_expression(
                 child,
                 variable_map=variable_map,
                 lxml_etree=lxml_etree,
+                context_item_value=context_item_value
             )
             if ans is not None:
                 self.comparators[i] = ans
 
         # Do the same with the left operand
-        ans_left = resolve_comparator_loop(
+        ans_left = resolve_expression(
             self.left,
             variable_map=variable_map,
             lxml_etree=lxml_etree,
+            context_item_value=context_item_value
         )
         if ans_left is not None:
             self.left = ans_left
