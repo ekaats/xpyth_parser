@@ -193,7 +193,9 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
         if context_item_value is None:
             rootexpr.resolve(variable_map, lxml_etree)
 
-        return rootexpr.answer(context_item_value=context_item_value)
+
+        return rootexpr.answer(variable_map=variable_map,
+            lxml_etree=lxml_etree, context_item_value=context_item_value)
 
     elif isinstance(rootexpr, IfExpression):
         # Replace the if statement with its outcome
@@ -239,7 +241,7 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
             rootexpr.resolve(variable_map=variable_map, lxml_etree=lxml_etree, context_item_value=context_item_value)
 
         # Get answer
-        return rootexpr.answer(context_item_value=context_item_value)
+        return rootexpr.answer(variable_map=variable_map, lxml_etree=lxml_etree, context_item_value=context_item_value)
 
     # Give back the now resolved expression
     return rootexpr
@@ -841,7 +843,7 @@ class Operator:
         # self.op does not show up in debugger. This is a workaround to see which operator is present.
         return str(self.op)
 
-    def answer(self, context_item_value=None):
+    def answer(self, variable_map, lxml_etree, context_item_value=None):
         """
         Returns the answer of the operator
 
@@ -882,7 +884,7 @@ class UnaryOperator(SyntaxTreeNodeMixin, Operator):
         else:
             print("Operand of unary operator type not known")
 
-    def answer(self, context_item_value=None):
+    def answer(self, variable_map, lxml_etree, context_item_value=None):
 
         if isinstance(self.operand, int):
             # If the value is an int, we can just use this value
@@ -966,7 +968,7 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
         # else:
         #     print("right Operand of binary operator type not known")
 
-    def answer(self, context_item_value=None):
+    def answer(self, variable_map, lxml_etree, context_item_value=None):
 
         if isinstance(self.left, int) or isinstance(self.left, float):
             # If the value is an int, we can just use this value
@@ -974,10 +976,13 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
 
         elif isinstance(self.left, Operator):
             # If the value is an Operator, we need to get to calculate its value first
-            left = self.left.answer()
+            left = resolve_expression(expression=self.left, variable_map=variable_map, lxml_etree=lxml_etree)
+
+            # left = left.answer()
 
         elif isinstance(self.left, Function):
             # Get the value from the function
+
             left = self.left.run()
 
         elif isinstance(self.left, ContextItem):
@@ -992,8 +997,10 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
             right = self.right
 
         elif isinstance(self.right, Operator):
+            right = resolve_expression(expression=self.right, variable_map=variable_map, lxml_etree=lxml_etree)
+
             # If the value is an Operator, we need to get to calculate its value first
-            right = self.right.answer()
+            # right = right.answer()
 
         elif isinstance(self.right, Function):
             # Get the value from the function
@@ -1087,7 +1094,7 @@ class Compare(SyntaxTreeNodeMixin):
         if ans_left is not None:
             self.left = ans_left
 
-    def answer(self, context_item_value=None):
+    def answer(self, variable_map, lxml_etree, context_item_value=None):
         """
         Gives the answer of the Operator. If the operator contains any nested functions,
         they will be resolved automatically.
@@ -1101,7 +1108,7 @@ class Compare(SyntaxTreeNodeMixin):
 
         elif isinstance(self.left, Operator):
             # Need to get the value of the operator
-            left = self.left.answer(context_item_value=context_item_value)
+            left = self.left.answer(variable_map=variable_map, lxml_etree=lxml_etree, context_item_value=context_item_value)
 
         elif isinstance(self.left, ContextItem):
             left = context_item_value
