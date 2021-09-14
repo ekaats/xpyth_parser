@@ -1,6 +1,7 @@
 from lxml import etree
+from lxml.etree import Element
 from typing import Union, Optional
-from src.xpyth_parser.grammar.expressions import t_XPath, resolve_expression
+from .grammar.expressions import t_XPath, resolve_expression
 
 
 class Parser:
@@ -9,8 +10,8 @@ class Parser:
         xpath_expr: str,
         parseAll: bool = True,
         variable_map: Optional[dict] = None,
-        xml: Optional[bytes] = None,
-        context_item: Union[str, list] = None,
+        xml:Union[bytes, str, Element, None] = None,
+        context_item: Union[str, list, None] = None,
         no_resolve=False,
     ):
         """
@@ -47,7 +48,14 @@ class Parser:
         self.resolved_answer = None
 
         if xml:
-            tree = etree.fromstring(xml)
+            if isinstance(xml, bytes):
+                tree = etree.fromstring(xml)
+            elif isinstance(xml, str):
+                tree = etree.fromstring(bytes(xml))
+                tree = xml
+            else:
+                tree = xml
+
             self.XPath.xml_etree = tree
             self.lxml_etree = tree
         else:
@@ -62,6 +70,7 @@ class Parser:
                 variable_map=self.variable_map,
                 lxml_etree=self.lxml_etree,
             )
+
 
     def run(self):
         """

@@ -114,3 +114,9 @@ class FunctionsOperatorsSequences(unittest.TestCase):
         daration_obj = duration_outcome_2.resolved_answer
         self.assertTrue(isinstance(daration_obj, Duration))
         self.assertEqual(daration_obj.months, -1347)
+
+    def test_qname(self):
+        self.assertEqual(Parser("xs:QName(\'prefix:localname\')").resolved_answer,
+                         QName(localname="localname", prefix="prefix"))
+        self.assertEqual(Parser("xs:QName(\'http://example/thing\', \'prefix:localname\')").resolved_answer,
+                         QName(localname="localname", prefix="prefix", namespace="http://example/thing"))

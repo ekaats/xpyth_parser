@@ -20,11 +20,13 @@ def get_variable(v):
 
 
 class QName:
-    def __init__(self, localname, prefix=None):
+    def __init__(self, localname, prefix=None, namespace=None):
         self.localname = localname
         self.prefix = prefix
+        self.namespace = namespace
 
     def __repr__(self):
+
         if self.prefix:
             return f"{self.prefix}:{self.localname}"
         return self.localname

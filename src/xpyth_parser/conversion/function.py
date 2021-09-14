@@ -1,6 +1,6 @@
 from .functions.aggregate import get_aggregate_function
 from .functions.datetime import Date, YearMonthDuration
-from .functions.generic import Function, Not, Empty
+from .functions.generic import Function, Not, Empty, FnQname
 
 
 def get_function(v):
@@ -28,6 +28,8 @@ def get_function(v):
         return Date(arguments=args, qname=qname)
     elif qname.__repr__() == "xs:yearMonthDuration":
         return YearMonthDuration(arguments=args, qname=qname)
+    elif qname.__repr__() == "xs:QName":
+        return FnQname(arguments=args, qname=qname)
     else:
         # Return generic function if the function name is not found
         return Function(arguments=args, qname=qname)

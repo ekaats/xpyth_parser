@@ -1,4 +1,4 @@
-from ..qname import Parameter
+from ..qname import Parameter, QName
 
 
 class Function:
@@ -137,6 +137,21 @@ class Not(Function):
 
             raise Exception("Run self.cast_parameters(paramlist) first")
 
+class FnQname(Function):
+    def __init__(self, arguments, qname=None):
+        # Returns an xs:QName value formed using a supplied namespace URI and lexical QName.
+        super().__init__(arguments, qname, function_name="qname")
+
+    def run(self):
+        # Returns an xs:QName value formed using a supplied namespace URI and lexical QName.
+
+        if len(self.arguments) == 1:
+            prefix, localname = str(self.arguments[0]).split(":", 1)
+            return QName(prefix=prefix, localname=localname)
+        elif len(self.arguments) == 2:
+            # If a namespace is given, add that to the QName as well
+            prefix, localname = str(self.arguments[1]).split(":", 1)
+            return QName(prefix=prefix, localname=localname, namespace=self.arguments[0])
 
 class OrExpr:
     def __init__(self, a, b):
