@@ -76,17 +76,15 @@ class IfExpression(Expr):
         self.then_expr = then_expr
         self.else_expr = else_expr
 
-    def resolve_expression(self, test_outcome):
+    def resolve_expression(self, test_outcome, variable_map, lxml_etree):
 
         # Then and Else are both SingleExpressions
         if test_outcome is True:
             # Test has succeeded, so we return the 'then' ExprSingle
-
-            return_expr = self.then_expr
+            return_expr = resolve_expression(expression=self.then_expr, variable_map=variable_map, lxml_etree=lxml_etree)
         else:
 
-            return_expr = self.else_expr
-
+            return_expr = resolve_expression(expression=self.else_expr, variable_map=variable_map, lxml_etree=lxml_etree)
         return return_expr
 
 
@@ -161,8 +159,8 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
 
         return value
 
-    if hasattr(expression, "expr"):
-        # Expresssion needs to be unpacked:
+    if isinstance(expression, XPath):
+        # Expression needs to be unpacked:
         rootexpr = expression.expr
     else:
         rootexpr = expression
@@ -207,7 +205,8 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
             lxml_etree=lxml_etree,
         )
         # Then, get the 'then' or 'else'  expression and continue
-        return rootexpr.resolve_expression(test_outcome=outcome_of_test)
+        return rootexpr.resolve_expression(test_outcome=outcome_of_test, variable_map=variable_map,
+            lxml_etree=lxml_etree)
 
     elif isinstance(rootexpr, PostfixExpr):
         # Need to resolve the predicate (filter), pass  arguments to the rootexpr as if it is a function or perform a lookup
