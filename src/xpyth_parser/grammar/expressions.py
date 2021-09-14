@@ -135,7 +135,8 @@ class PathExpression:
 
 def resolve_expression(expression, variable_map, lxml_etree, context_item_value=None):
     """
-    Loops though parsed results and resolves qnames using the variable_map
+    Loops though parsed results using dynamic content. This is the main loop of our interpreting step
+
 
     :return:
 
@@ -191,7 +192,9 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
         return param_value
 
     elif isinstance(rootexpr, Operator):
-        rootexpr.resolve(variable_map, lxml_etree)
+        if context_item_value is None:
+            rootexpr.resolve(variable_map, lxml_etree)
+
         return rootexpr.answer(context_item_value=context_item_value)
 
     elif isinstance(rootexpr, IfExpression):
