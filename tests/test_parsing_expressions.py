@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from src.xpyth_parser.conversion.functions.generic import Function
@@ -194,6 +195,58 @@ class ExpressionTests(unittest.TestCase):
         self.assertEqual(
             Parser("if(1 = 2) then a else b").resolved_answer, QName(localname="b")
         )
+
+        # With path expressions, returning qnames
+        TESTDATA_FILENAME = os.path.join(
+            os.path.dirname(__file__), "input/instance.xml"
+        )
+
+        with open(TESTDATA_FILENAME) as xml_file:
+
+            xml_bytes = bytes(xml_file.read(), encoding="utf-8")
+            self.assertEqual(
+                Parser(
+                    "if(count(//singleOccuringElement) eq 1) then xs:QName(\'test_prefix:localn\') else xs:QName(\'test_prefix:otherloc\')",
+                    xml=xml_bytes).resolved_answer,
+                QName(prefix="test_prefix", localname="localn")
+            )
+
+            # If no file is given, it should return the 'else' Expr and not fail otherwise
+            self.assertEqual(
+                Parser(
+                    "if(count(//singleOccuringElement) eq 1) then xs:QName(\'test_prefix:localn\') else xs:QName(\'test_prefix:otherloc\')").resolved_answer,
+                QName(prefix="test_prefix", localname="otherloc")
+            )
+
+            # With multiple elements found
+            self.assertEqual(
+                Parser(
+                    "if(count(//multipleDoubleOccuringElement) eq 4) then xs:QName(\'test_prefix:localn\') else xs:QName(\'test_prefix:otherloc\')"
+                    ,xml=xml_bytes).resolved_answer,
+                QName(prefix="test_prefix", localname="localn")
+            )
+
+            # With multiple nested if statements
+            self.assertEqual(
+                Parser(
+                    "if(count(//multipleDoubleOccuringElement) eq 4) then (if(count(//doubleOccuringElement) eq 2) then 345  else '3126') else xs:QName(\'test_prefix:otherloc\')",
+                xml=xml_bytes).resolved_answer,
+                345
+            )
+
+            self.assertEqual(
+                Parser(
+                    "if(count(//multipleDoubleOccuringElement) eq 4) then (if(count(//doubleOccuringElement) eq 5) then 345  else '3126') else xs:QName(\'test_prefix:otherloc\')",
+                xml=xml_bytes).resolved_answer,
+                '3126'
+            )
+            self.assertEqual(
+                Parser(
+                    "if(count(//multipleDoubleOccuringElement) eq 2) then (if(count(//doubleOccuringElement) eq 5) then 345  else '3126') else xs:QName(\'test_prefix:otherloc\')",
+                xml=xml_bytes).resolved_answer,
+                QName(prefix="test_prefix", localname="otherloc")
+            )
+
 
     def test_range_expression(self):
         self.assertEqual(Parser("1 to 100").resolved_answer, range(1, 100))
