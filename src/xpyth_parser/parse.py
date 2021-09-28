@@ -2,7 +2,7 @@ from lxml import etree
 from lxml.etree import Element
 from typing import Union, Optional
 from .grammar.expressions import t_XPath, resolve_expression
-
+from .conversion.functions.generic import FunctionRegistry
 
 class Parser:
     def __init__(
@@ -13,6 +13,7 @@ class Parser:
         xml:Union[bytes, str, Element, None] = None,
         context_item: Union[str, list, None] = None,
         no_resolve=False,
+        custom_functions=None
     ):
         """
 
@@ -27,6 +28,10 @@ class Parser:
         parsed_expr.XPath would contain the resolved tree
         parsed_expr.resolved_answer == True. This is the answer of the expression
         """
+
+        # First, add the custom functions to the function registry.
+        FunctionRegistry(custom_functions=custom_functions)
+
         if isinstance(xpath_expr, str):
             # Parse the Grammar
 
@@ -51,7 +56,7 @@ class Parser:
             if isinstance(xml, bytes):
                 tree = etree.fromstring(xml)
             elif isinstance(xml, str):
-                tree = etree.fromstring(bytes(xml))
+                tree = etree.fromstring(bytes(xml, encoding="utf-8"))
 
             else:
                 tree = xml
