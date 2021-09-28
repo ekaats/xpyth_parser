@@ -114,13 +114,6 @@ class Sum(Function):
             except TypeError:
                 raise Exception("Run self.cast_parameters(paramlist) first")
 
-    def get_ast(self, paramlist=None):
-        for i, argument in enumerate(self.arguments):
-            if isinstance(argument, Parameter):
-                # self.arguments[i] = argument.get_ast_node(paramlist=paramlist)
-                newarg = argument.resolve_parameter(paramlist=paramlist)
-                print(newarg)
-
 
 def get_aggregate_function(args, qname):
     # Function name is an EQName. This name corresponds with a (build-in) function.
