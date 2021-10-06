@@ -123,30 +123,29 @@ class PathTraversalTests(unittest.TestCase):
                 2,
             )
 
-            # Ignore the parameter if no variable_map is given, or the param does not exist in the map
-            self.assertEqual(
-                Parser("count(//singleOccuringElement, $p_val)", xml=xml_bytes).run(), 1
-            )
-            self.assertEqual(
-                Parser(
-                    "count(//singleOccuringElement, $p_val)",
+            # todo: somehow these Exceptions are not raised in test, but they are when tested seperately.
+            # Throw exception if parameter is not found
+            with self.assertRaises(Exception, Parser, xpath_expr="count(//singleOccuringElement, $p_val)", xml=xml_bytes) as e:
+
+                assert e.__str__() == "Variable not in registry: 'p_val'"
+
+            with self.assertRaises(Exception, Parser, xpath_expr="count(//singleOccuringElement, $p_val)",
                     xml=xml_bytes,
-                    variable_map={"p_val_fault": 300},
-                ).run(),
-                1,
-            )
+                    variable_map={"p_val_fault": 300}):
+
+                assert e.__str__() == "Variable not in registry: 'p_val'"
 
             self.assertEqual(
-                Parser("sum(//singleOccuringElement)", xml=xml_bytes).run(), 40000
+                Parser("fn_sum(//singleOccuringElement)", xml=xml_bytes).run(), 40000
             )
             self.assertEqual(
                 Parser("avg(//singleOccuringElement)", xml=xml_bytes).run(), 40000
             )
             self.assertEqual(
-                Parser("min(//singleOccuringElement)", xml=xml_bytes).run(), 40000
+                Parser("fn_min(//singleOccuringElement)", xml=xml_bytes).run(), 40000
             )
             self.assertEqual(
-                Parser("max(//singleOccuringElement)", xml=xml_bytes).run(), 40000
+                Parser("fn_max(//singleOccuringElement)", xml=xml_bytes).run(), 40000
             )
             self.assertTrue(
                 Parser("count(//singleOccuringElement) eq 1", xml=xml_bytes).run()
@@ -156,16 +155,16 @@ class PathTraversalTests(unittest.TestCase):
                 Parser("count(//doubleOccuringElement)", xml=xml_bytes).run(), 2
             )
             self.assertEqual(
-                Parser("sum(//doubleOccuringElement)", xml=xml_bytes).run(), 65000
+                Parser("fn_sum(//doubleOccuringElement)", xml=xml_bytes).run(), 65000
             )
             self.assertEqual(
                 Parser("avg(//doubleOccuringElement)", xml=xml_bytes).run(), 32500
             )
             self.assertEqual(
-                Parser("min(//doubleOccuringElement)", xml=xml_bytes).run(), 21000
+                Parser("fn_min(//doubleOccuringElement)", xml=xml_bytes).run(), 21000
             )
             self.assertEqual(
-                Parser("max(//doubleOccuringElement)", xml=xml_bytes).run(), 44000
+                Parser("fn_max(//doubleOccuringElement)", xml=xml_bytes).run(), 44000
             )
             self.assertTrue(
                 Parser("count(//doubleOccuringElement) eq 2", xml=xml_bytes).run()
@@ -175,16 +174,16 @@ class PathTraversalTests(unittest.TestCase):
                 Parser("count(//multipleOccuringElement)", xml=xml_bytes).run(), 4
             )
             self.assertEqual(
-                Parser("sum(//multipleOccuringElement)", xml=xml_bytes).run(), 72500
+                Parser("fn_sum(//multipleOccuringElement)", xml=xml_bytes).run(), 72500
             )
             self.assertEqual(
                 Parser("avg(//multipleOccuringElement)", xml=xml_bytes).run(), 18125
             )
             self.assertEqual(
-                Parser("min(//multipleOccuringElement)", xml=xml_bytes).run(), 1400
+                Parser("fn_min(//multipleOccuringElement)", xml=xml_bytes).run(), 1400
             )
             self.assertEqual(
-                Parser("max(//multipleOccuringElement)", xml=xml_bytes).run(), 44000
+                Parser("fn_max(//multipleOccuringElement)", xml=xml_bytes).run(), 44000
             )
             self.assertTrue(
                 Parser("count(//multipleOccuringElement) eq 4", xml=xml_bytes).run()
@@ -197,45 +196,46 @@ class PathTraversalTests(unittest.TestCase):
 
         with open(TESTDATA_FILENAME) as xml_file:
             xml_bytes = bytes(xml_file.read(), encoding="utf-8")
+            """
+            These queries yield LXML elements
+            """
 
-            self.assertEqual(
-                Parser("//multipleOccuringElement[1]", xml=xml_bytes).run(),
-                [44000, 1400],
-            )
+            multiple1 = Parser("//multipleOccuringElement[1]", xml=xml_bytes).run(),
 
-            self.assertEqual(
-                Parser("//multipleOccuringElement[2]", xml=xml_bytes).run(),
-                [21000, 6100],
-            )
+            self.assertEqual(multiple1[0][0].text, "44000")
+            self.assertEqual(multiple1[0][1].text, "1400")
 
-            self.assertEqual(
-                Parser(
+            multiple2 = Parser("//multipleOccuringElement[2]", xml=xml_bytes).run()
+            self.assertEqual(multiple2[0].text, "21000")
+            self.assertEqual(multiple2[1].text, "6100")
+
+            multiple3 = Parser(
                     "/maindoc/nested/multipleOccuringElement[2]", xml=xml_bytes
-                ).run(),
-                [21000],
-            )
+                ).run()
+            self.assertEqual(multiple3.text, "21000")
 
-            self.assertEqual(
-                Parser(
+            multiple4 = Parser(
                     "/maindoc/nested/multipleOccuringElement[1]", xml=xml_bytes
-                ).run(),
-                [44000],
+                ).run()
+            self.assertEqual(multiple4.text, "44000",
             )
 
             self.assertEqual(
-                Parser("/maindoc/doubleOccuringElement[1]", xml=xml_bytes).run(),
-                [44000],
+                Parser("/maindoc/doubleOccuringElement[1]", xml=xml_bytes).run().text,
+                "44000",
             )
 
             self.assertEqual(
-                Parser("/maindoc/multipleOccuringElement[2]", xml=xml_bytes).run(),
-                [6100],
+                Parser("/maindoc/multipleOccuringElement[2]", xml=xml_bytes).run().text,
+                "6100",
             )
 
             self.assertEqual(
                 Parser(
                     "/maindoc/doubleNested[2]/multipleDoubleOccuringElement[1]",
                     xml=xml_bytes,
-                ).run(),
-                [24527],
+                ).run().text,
+                "24527",
             )
+            # todo: need to figure out while some queries are in lists, others are not.
+            #  I think I am unpacking a bit too much somewhere

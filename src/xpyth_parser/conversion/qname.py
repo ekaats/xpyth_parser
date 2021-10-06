@@ -11,14 +11,6 @@ def qname_from_parse_results(a, string):
     else:
         return QName(localname=string[0])
 
-
-def get_variable(v):
-    if len(v) > 1:
-        return Parameter(qname=v[0], type_declaration=v[1])
-    else:
-        return Parameter(qname=v[0])
-
-
 class QName:
     def __init__(self, localname, prefix=None, namespace=None):
         self.localname = localname

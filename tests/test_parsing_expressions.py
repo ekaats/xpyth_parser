@@ -1,7 +1,7 @@
+import functools
 import os
 import unittest
 
-from src.xpyth_parser.conversion.functions.generic import Function
 from src.xpyth_parser.conversion.qname import QName
 from src.xpyth_parser.grammar.expressions import (
     t_PrimaryExpr,
@@ -66,10 +66,10 @@ class ExpressionTests(unittest.TestCase):
 
         # Function Call
         l6 = list(t_PrimaryExpr.parseString("my:function(1,2)", parseAll=True))
-        self.assertTrue(isinstance(l6[0], Function))
-        self.assertEqual(l6[0].qname, QName(prefix="my", localname="function"))
-        self.assertEqual(l6[0].arguments[0], 1)
-        self.assertEqual(l6[0].arguments[1], 2)
+        self.assertEqual(l6[0].__str__(), "my:function")
+        self.assertEqual(l6[0], QName(prefix="my", localname="function"))
+        self.assertEqual(l6[1], 1)
+        self.assertEqual(l6[2], 2)
 
     def test_operators(self):
         """
@@ -98,11 +98,11 @@ class ExpressionTests(unittest.TestCase):
         self.assertTrue(isinstance(l4.expr, UnaryOperator))
         self.assertEqual(l4.expr.op, "+")
         # The unary expression before a function should parse correctly
+        
 
-        self.assertTrue(isinstance(l4.expr.operand, Function))
-        self.assertEqual(l4.expr.operand.qname, QName(prefix="fn", localname="sum"))
-        self.assertEqual(l4.expr.operand.arguments[0], 1)
-        self.assertEqual(l4.expr.operand.arguments[1], 3)
+        self.assertTrue(isinstance(l4.expr.operand, functools.partial))
+        self.assertEqual(l4.expr.operand.args[0][0], 1)
+        self.assertEqual(l4.expr.operand.args[0][1], 3)
 
     def test_compile_arithmetic(self):
 
@@ -215,7 +215,7 @@ class ExpressionTests(unittest.TestCase):
             self.assertEqual(
                 Parser(
                     "if(count(//singleOccuringElement) eq 1) then xs:QName(\'test_prefix:localn\') else xs:QName(\'test_prefix:otherloc\')").resolved_answer,
-                QName(prefix="test_prefix", localname="otherloc")
+                QName(prefix="test_prefix", localname="localn")
             )
 
             # With multiple elements found

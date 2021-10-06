@@ -1,8 +1,11 @@
 from lxml import etree
 from lxml.etree import Element
 from typing import Union, Optional
-from .grammar.expressions import t_XPath, resolve_expression
+from .grammar.expressions import t_XPath, resolve_expression, QuerySingleton
 from .conversion.functions.generic import FunctionRegistry
+from .grammar.qualified_names import VariableRegistry
+
+
 
 class Parser:
     def __init__(
@@ -31,6 +34,24 @@ class Parser:
 
         # First, add the custom functions to the function registry.
         FunctionRegistry(custom_functions=custom_functions)
+        VariableRegistry(variables=variable_map)
+
+        if xml is not None:
+            if isinstance(xml, bytes):
+                tree = etree.fromstring(xml)
+            elif isinstance(xml, str):
+                tree = etree.fromstring(bytes(xml, encoding="utf-8"))
+
+            else:
+                tree = xml
+
+            QuerySingleton(lxml_tree=tree)
+
+            self.lxml_etree = tree
+        else:
+            self.lxml_etree = None
+
+        self.no_resolve = no_resolve
 
         if isinstance(xpath_expr, str):
             # Parse the Grammar
@@ -40,6 +61,7 @@ class Parser:
                 raise ("Did not expect more than 1 expressions")
             else:
                 self.XPath = parsed_grammar[0]
+                self.XPath.xml_etree = self.lxml_etree
         else:
             print("Expected a string as input for an XPath Expression")
 
@@ -52,23 +74,7 @@ class Parser:
         # Set resolved_answer to None:
         self.resolved_answer = None
 
-        if xml is not None:
-            if isinstance(xml, bytes):
-                tree = etree.fromstring(xml)
-            elif isinstance(xml, str):
-                tree = etree.fromstring(bytes(xml, encoding="utf-8"))
-
-            else:
-                tree = xml
-
-            self.XPath.xml_etree = tree
-            self.lxml_etree = tree
-        else:
-            self.lxml_etree = None
-
-        self.no_resolve = no_resolve
         if no_resolve is False:
-
             # Resolve parameters and path queries the of expression
             self.resolved_answer = resolve_expression(
                 expression=self.XPath,
