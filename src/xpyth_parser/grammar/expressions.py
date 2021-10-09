@@ -1,5 +1,7 @@
+import functools
 import operator
 
+import pyparsing
 from pyparsing import (
     Combine,
     Literal,
@@ -18,8 +20,7 @@ from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Lit
 from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
 from .tests import t_KindTest, t_NodeTest
 
-from ..conversion.function import get_function
-from ..conversion.functions.generic import Function
+from ..conversion.function import get_function, resolve_paths, cast_parameters
 from ..conversion.qname import Parameter
 
 xpath_version = "3.1"
@@ -104,6 +105,7 @@ class PathExpression:
 
             for predicate in step.predicatelist:
                 return_string += f"[{str(predicate.val.expr)}]"
+                # return_string += f"{str(predicate.val.expr)}"
 
         return return_string
 
@@ -149,11 +151,11 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
         :return:
         """
 
-        fn.resolve_paths(lxml_etree=lxml_etree)
-        fn.cast_parameters(paramlist=variable_map)
+        resolve_paths(fn=fn, lxml_etree=lxml_etree)
+        # cast_parameters(fn=fn, paramlist=variable_map)
 
         # Then get the value by running the function
-        value = fn.run()
+        value = fn()
 
         # Put the output value of the function into the AST as a number
 
@@ -181,9 +183,10 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
         # Is a sequence with multiple values
         return rootexpr
 
-    if isinstance(rootexpr, Function):
+    if isinstance(rootexpr, functools.partial):
         # Main node is a Function. Resolve this and add the answer to the Syntax Tree.
-        return resolve_fn(rootexpr)
+        return rootexpr()
+        # return resolve_fn(rootexpr)
 
     elif isinstance(rootexpr, Parameter):
         param_value = rootexpr.resolve_parameter(paramlist=variable_map)
@@ -242,6 +245,9 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
 
         # Get answer
         return rootexpr.answer(variable_map=variable_map, lxml_etree=lxml_etree, context_item_value=context_item_value)
+    elif isinstance(rootexpr, pyparsing.ParseResults):
+        l = list(rootexpr)
+        return l
 
     # Give back the now resolved expression
     return rootexpr
@@ -263,7 +269,17 @@ class XPath:
 
 t_Expr = t_ExprSingle + ZeroOrMore(Literal(","), t_ExprSingle)
 t_Expr.setName("Expr")
-t_Expr.setParseAction(lambda x: XPath(expr=x[0]))
+
+def parse_expr(toks):
+    if len(toks) == 1:
+        # Unpack the list
+        return XPath(expr=toks[0])
+    else:
+        return XPath(expr=toks)
+
+
+# t_Expr.setParseAction(lambda x: XPath(expr=x[0]))
+t_Expr.setParseAction(parse_expr)
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-ParenthesizedExpr
 
@@ -320,6 +336,21 @@ t_ReverseStep.setName("ReverseStep")
 t_Predicate = Suppress("[") + t_Expr + Suppress("]")
 t_Predicate.setName("Predicate")
 
+class QuerySingleton:
+    _instance = None
+    lxml_tree = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(
+            self,
+            lxml_tree = None
+    ):
+        if lxml_tree is not None:
+            self.lxml_tree = lxml_tree
 
 class Predicate:
     def __init__(self, val):
@@ -380,18 +411,16 @@ t_ParenthesizedExpr.setName("ParenthesizedExpr")
 
 """ end Parentisized Expressions  """
 
-
 t_PrimaryExpr = (
     t_FunctionCall | t_ParenthesizedExpr | t_Literal | t_VarRef | t_ContextItemExpr
 )
 
 t_PrimaryExpr.setName("PrimaryExpr")
 
-
 class PostfixExpr(Expr):
     def __init__(self, primary_expr, secondary=None):
         """
-        A Postfix expresssion is a primary expression with either a predicate, argumentList or Lookup
+        A Postfix expression is a primary expression with either a predicate, argumentList or Lookup
 
         :param primary_expr:
         :param secondary:
@@ -447,7 +476,7 @@ def postfix_expr(toks):
     :return:
     """
 
-    if len(toks) > 1:
+    if len(toks) > 1 and isinstance(toks[0], XPath):
         # We only need to create a PostfixExpr when there are secondary expressions to add.
         # Otherwise It'll just create overhead
         return PostfixExpr(toks[0], toks[1:])
@@ -547,7 +576,17 @@ def get_path_expr(toks):
         # If we didn't find anything axis-like, we probably need to return all toks
         return toks
 
-    return PathExpression(steps=steps)
+
+    path_expression = PathExpression(steps=steps)
+    # todo: Path expression also needs to be handled while parsing if we want partial functions to work.
+    #  this probably means that we should let the whole 'parse first, intepret later' part go :/
+
+    query_singlton = QuerySingleton()
+    query = path_expression.to_str()
+
+    result = query_singlton.lxml_tree.xpath(query)
+
+    return result
 
 
 t_PathExpr = (
@@ -878,9 +917,10 @@ class UnaryOperator(SyntaxTreeNodeMixin, Operator):
         :return:
         """
 
-        if isinstance(self.operand, Function):
-            self.operand.resolve_paths(lxml_etree=lxml_etree)
-            self.operand.cast_parameters(paramlist=variable_map)
+        if isinstance(self.operand, functools.partial):
+
+            resolve_paths(fn=self.operand, lxml_etree=lxml_etree)
+            # cast_parameters(fn=self.operand, paramlist=variable_map)
         else:
             print("Operand of unary operator type not known")
 
@@ -894,9 +934,9 @@ class UnaryOperator(SyntaxTreeNodeMixin, Operator):
             # If the value is an Operator, we need to get to calculate its value first
             operand = self.operand.answer()
 
-        elif isinstance(self.operand, Function):
+        elif isinstance(self.operand, functools.partial):
             # Get the value from the function
-            operand = self.operand.run()
+            operand = self.operand()
 
         else:
 
@@ -947,26 +987,20 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
         :param lxml_etree:
         :return:
         """
-        if isinstance(self.left, Function):
-            self.left.resolve_paths(lxml_etree=lxml_etree)
-            self.left.cast_parameters(paramlist=variable_map)
-        # elif isinstance(self.left, int):
-        #     pass
-        # elif isinstance(self.left, ContextItem):
-        #     pass # We handle context items when needed in the loop itself.
-        # else:
-        #     print("Operand of unary operator type not known")
+        if isinstance(self.left, functools.partial):
 
-        if isinstance(self.right, Function):
-            self.right.resolve_paths(lxml_etree=lxml_etree)
-            self.right.cast_parameters(paramlist=variable_map)
-        # elif isinstance(self.right, int):
-        #     pass
-        # elif isinstance(self.left, ContextItem):
-        #     pass # We handle context items when needed in the loop itself.
+            resolve_paths(self.left, lxml_etree=lxml_etree)
+            # self.left.resolve_paths(lxml_etree=lxml_etree)
+            # cast_parameters(self.left, paramlist=variable_map)
+            # self.left.cast_parameters(paramlist=variable_map)
 
-        # else:
-        #     print("right Operand of binary operator type not known")
+
+        if isinstance(self.right, functools.partial):
+            # self.right.resolve_paths(lxml_etree=lxml_etree)
+            # self.right.cast_parameters(paramlist=variable_map)
+
+            resolve_paths(self.right, lxml_etree=lxml_etree)
+            # cast_parameters(self.right, paramlist=variable_map)
 
     def answer(self, variable_map, lxml_etree, context_item_value=None):
 
@@ -980,10 +1014,10 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
 
             # left = left.answer()
 
-        elif isinstance(self.left, Function):
+        elif isinstance(self.left, functools.partial):
             # Get the value from the function
 
-            left = self.left.run()
+            left = self.left()
 
         elif isinstance(self.left, ContextItem):
             left = context_item_value
@@ -1002,9 +1036,9 @@ class BinaryOperator(SyntaxTreeNodeMixin, Operator):
             # If the value is an Operator, we need to get to calculate its value first
             # right = right.answer()
 
-        elif isinstance(self.right, Function):
+        elif isinstance(self.right, functools.partial):
             # Get the value from the function
-            right = self.right.run()
+            right = self.right()
 
         elif isinstance(self.right, ContextItem):
             right = context_item_value
@@ -1103,8 +1137,8 @@ class Compare(SyntaxTreeNodeMixin):
 
         :return: Answer of operator
         """
-        if isinstance(self.left, Function):
-            left = self.left.run()
+        if isinstance(self.left, functools.partial):
+            left = self.left()
 
         elif isinstance(self.left, Operator):
             # Need to get the value of the operator
@@ -1119,9 +1153,9 @@ class Compare(SyntaxTreeNodeMixin):
         for i, comparator in enumerate(self.comparators):
 
             # Resolve function or operator if this is a nested function
-            if isinstance(comparator, Function):
-                self.comparators[i] = comparator.run()
-                comparator = comparator.run()
+            if isinstance(comparator, functools.partial):
+                self.comparators[i] = comparator()
+                comparator = comparator()
 
             elif isinstance(comparator, Operator):
                 self.comparators[i] = comparator.answer()
