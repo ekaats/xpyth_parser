@@ -1,3 +1,4 @@
+import lxml.etree
 from isodate import parse_date, parse_duration
 from functools import partial
 
@@ -6,6 +7,34 @@ from .qname import QName, Parameter
 
 reg = FunctionRegistry()
 
+def cast_lxml_elements(args):
+    """
+    Cast args from LXML elements for functions where this is needed.
+    :param args:
+    :return:
+    """
+
+    # If it is one element we found, we can cast it and return it
+    if isinstance(args, lxml.etree._Element):
+        try:
+            arg = int(args.text)
+        except:
+            arg = args.text
+
+        # But we still want to return a list, because that is expected in functions
+        return [arg]
+
+    # Else, we need to go through the list
+    casted_args = []
+    for arg in args:
+        if isinstance(arg, lxml.etree._Element):
+            try:
+                arg = int(arg.text)
+            except:
+                arg = arg.text
+        casted_args.append(arg)
+
+    return casted_args
 def fn_count(args):
 
     if isinstance(args, list):
@@ -13,87 +42,32 @@ def fn_count(args):
         return len(args)
     else:
         return 1
-    # if self.cast_args:
-    #     # If arguments are already casted from parameters or paths, use this information
-    #     return len(self.cast_args)
-    #
-    # else:
-    #     # If casting has not been done, try to get the length of the arguments list.
-    #
-    #     try:
-    #         return len(self.arguments)
-    #     except TypeError:
-    #         raise Exception("Run self.cast_parameters(paramlist) first")
+
 
 def fn_avg(args):
-
-    return sum(args) / len(args)
-    # if self.cast_args:
-    #     return sum(self.cast_args) / len(self.cast_args)
-    #
-    # else:
-    #     try:
-    #
-    #         return sum(self.arguments) / len(self.arguments)
-    #     except TypeError:
-    #         raise Exception("Run self.cast_parameters(paramlist) first")
+    casted_args = cast_lxml_elements(args=args)
+    return sum(casted_args) / len(casted_args)
 
 
 def fn_max(args):
-
-    return max(args)
-    # if self.cast_args:
-    #     return max(self.cast_args)
-    #
-    # else:
-    #     try:
-    #
-    #         return max(self.arguments)
-    #     except TypeError:
-    #         raise Exception("Run self.cast_parameters(paramlist) first")
+    casted_args = cast_lxml_elements(args=args)
+    return max(casted_args)
 
 def fn_min(args):
-    return min(args)
-    # if self.cast_args:
-    #     return min(self.cast_args)
-    #
-    # else:
-    #     try:
-    #
-    #         return min(self.arguments)
-    #     except TypeError:
-    #         raise Exception("Run self.cast_parameters(paramlist) first")
+    casted_args = cast_lxml_elements(args=args)
+    return min(casted_args)
 
 def fn_sum(args):
-    return sum(args)
-    # if self.cast_args:
-    #     return sum(self.cast_args)
-    #
-    # else:
-    #     try:
-    #
-    #         return sum(self.arguments)
-    #     except TypeError:
-    #         raise Exception("Run self.cast_parameters(paramlist) first")
+    casted_args = cast_lxml_elements(args=args)
+    return sum(casted_args)
+
 
 def fn_not(args):
     for arg in args:
         if arg is True:
             return False  # found an argument that is true
-
     # Did not find a True value
     return True
-
-    # if self.cast_args:
-    #     for arg in self.cast_args:
-    #         if arg is True:
-    #             return False  # found an argument that is true
-    #
-    #     # Did not find a True value
-    #     return True
-    # else:
-    #     raise Exception("Run self.cast_parameters(paramlist) first")
-
 
 def fn_empty(args):
     for arg in args:
@@ -101,17 +75,6 @@ def fn_empty(args):
             return True
 
     return False
-
-    # if self.cast_args:
-    #     # If there are any arguments, it is not empty.
-    #     for arg in self.cast_args:
-    #         if arg is None or arg == "":
-    #             return True
-    #
-    #     return False
-    #
-    # else:
-    #     raise Exception("Run self.cast_parameters(paramlist) first")
 
 def xs_date(args):
     if len(args) == 0:
@@ -121,7 +84,6 @@ def xs_date(args):
         return date
 
 def xs_yearMonthDuration(args):
-
 
     if len(args) == 0:
         return False

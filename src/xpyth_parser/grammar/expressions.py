@@ -247,10 +247,7 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
         return rootexpr.answer(variable_map=variable_map, lxml_etree=lxml_etree, context_item_value=context_item_value)
     elif isinstance(rootexpr, pyparsing.ParseResults):
         l = list(rootexpr)
-
-        # return XPath(expr=l)
         return l
-
 
     # Give back the now resolved expression
     return rootexpr
@@ -479,7 +476,7 @@ def postfix_expr(toks):
     :return:
     """
 
-    if len(toks) > 1:
+    if len(toks) > 1 and isinstance(toks[0], XPath):
         # We only need to create a PostfixExpr when there are secondary expressions to add.
         # Otherwise It'll just create overhead
         return PostfixExpr(toks[0], toks[1:])
@@ -503,7 +500,7 @@ elif xpath_version == "3.1":
 
     t_PostfixExpr = t_PrimaryExpr + ZeroOrMore(t_Predicate | t_ArgumentList | t_Lookup)
     t_PostfixExpr.setName("PostfixExpr")
-    # t_PostfixExpr.setParseAction(postfix_expr)
+    t_PostfixExpr.setParseAction(postfix_expr)
 
     t_StepExpr = t_PostfixExpr | t_AxisStep
     t_StepExpr.setName("StepExpr")
