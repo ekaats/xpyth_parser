@@ -585,7 +585,8 @@ def get_path_expr(toks):
     query = path_expression.to_str()
 
     result = query_singlton.lxml_tree.xpath(query)
-
+    if len(result) < 1:
+        return [None]
     return result
 
 

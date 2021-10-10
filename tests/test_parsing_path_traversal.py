@@ -239,3 +239,15 @@ class PathTraversalTests(unittest.TestCase):
             )
             # todo: need to figure out while some queries are in lists, others are not.
             #  I think I am unpacking a bit too much somewhere
+
+    def test_empty_paths(self):
+        TESTDATA_FILENAME = os.path.join(
+            os.path.dirname(__file__), "input/empty_instance.xml"
+        )
+
+        with open(TESTDATA_FILENAME) as xml_file:
+            xml_bytes = bytes(xml_file.read(), encoding="utf-8")
+            self.assertEqual(Parser("sum(//singleOccuringElement)", xml=xml_bytes).run(), 0)
+            self.assertRaises(ValueError, Parser, "min(//singleOccuringElement)", xml=xml_bytes)
+            self.assertRaises(ValueError, Parser, "max(//singleOccuringElement)", xml=xml_bytes)
+            self.assertRaises(ZeroDivisionError, Parser, "avg(//singleOccuringElement)", xml=xml_bytes)

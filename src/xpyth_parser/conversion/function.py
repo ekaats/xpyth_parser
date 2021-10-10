@@ -23,6 +23,9 @@ def cast_lxml_elements(args):
 
         # But we still want to return a list, because that is expected in functions
         return [arg]
+    elif args == None:
+        # If none is passed though (LXML has not found any elements, return the empty list)
+        return []
 
     # Else, we need to go through the list
     casted_args = []
