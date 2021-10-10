@@ -14,18 +14,22 @@ def cast_lxml_elements(args):
     :return:
     """
 
-    # If it is one element we found, we can cast it and return it
-    if isinstance(args, lxml.etree._Element):
+
+    if isinstance(args, str) or isinstance(args, int):
+        return args
+
+    elif isinstance(args, lxml.etree._Element):
         try:
             arg = int(args.text)
         except:
             arg = args.text
 
-        # But we still want to return a list, because that is expected in functions
-        return [arg]
+        return arg
+
     elif args == None:
         # If none is passed though (LXML has not found any elements, return the empty list)
         return []
+
 
     # Else, we need to go through the list
     casted_args = []
@@ -49,19 +53,37 @@ def fn_count(args):
 
 def fn_avg(args):
     casted_args = cast_lxml_elements(args=args)
+
+    if isinstance(casted_args, int):
+        # If there is only one value, the sum would be the same as the value
+        return casted_args
+
     return sum(casted_args) / len(casted_args)
 
 
 def fn_max(args):
     casted_args = cast_lxml_elements(args=args)
+    if isinstance(casted_args, int):
+        # If there is only one value, the sum would be the same as the value
+        return casted_args
+
     return max(casted_args)
 
 def fn_min(args):
     casted_args = cast_lxml_elements(args=args)
+    if isinstance(casted_args, int):
+        # If there is only one value, the sum would be the same as the value
+        return casted_args
+
     return min(casted_args)
 
 def fn_sum(args):
     casted_args = cast_lxml_elements(args=args)
+
+    if isinstance(casted_args, int):
+        # If there is only one value, the sum would be the same as the value
+        return casted_args
+
     return sum(casted_args)
 
 
@@ -80,25 +102,27 @@ def fn_empty(args):
     return False
 
 def xs_date(args):
-    if len(args) == 0:
+    casted_args = cast_lxml_elements(args=args)
+    if len(casted_args) == 0:
         return False
     else:
-        date = parse_date(args)
+        date = parse_date(casted_args)
         return date
 
 def xs_yearMonthDuration(args):
-
-    if len(args) == 0:
+    casted_args = cast_lxml_elements(args=args)
+    if len(casted_args) == 0:
         return False
     else:
-        duration = parse_duration(args)
+        duration = parse_duration(casted_args)
         return duration
 
 def xs_dayTimeDuration(args):
-    if len(args) == 0:
+    casted_args = cast_lxml_elements(args=args)
+    if len(casted_args) == 0:
         return False
     else:
-        duration = parse_duration(args)
+        duration = parse_duration(casted_args)
         return duration
 
 def xs_qname(args):
