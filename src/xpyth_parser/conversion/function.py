@@ -14,9 +14,19 @@ def cast_lxml_elements(args):
     :return:
     """
 
-
-    if isinstance(args, str) or isinstance(args, int):
+    # If it is already a primary, return it
+    if isinstance(args, str) or isinstance(args, int) or isinstance(args, float):
         return args
+
+    elif isinstance(args, bytes):
+        # Could be an unparsed (L)XML element
+        etree = lxml.etree.fromstring(args)
+        try:
+            arg = int(etree.text)
+        except:
+            arg = etree.text
+
+        return arg
 
     elif isinstance(args, lxml.etree._Element):
         try:
@@ -141,10 +151,16 @@ def xs_qname(args):
         return QName(prefix=prefix, localname=localname, namespace=args[0])
 
 def fn_number(args):
-    # Returns an xs:QName value formed using a supplied namespace URI and lexical QName.
+    """
+    Returns an xs:QName value formed using a supplied namespace URI and lexical QName.
+
+    :param args:
+    :return:
+    """
+    casted_args = cast_lxml_elements(args=args)
 
     # Otherwise try to cast the argument to float.
-    return float(args)
+    return float(casted_args)
 
 functions = {
         "fn:count":fn_count,
