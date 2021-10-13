@@ -1,9 +1,12 @@
+import functools
+
 import lxml.etree
 from isodate import parse_date, parse_duration
 from functools import partial
 
-from .functions.generic import FunctionRegistry
+from .functions.generic import FunctionRegistry, QuerySingleton
 from .qname import QName, Parameter
+
 
 reg = FunctionRegistry()
 
@@ -13,6 +16,13 @@ def cast_lxml_elements(args):
     :param args:
     :return:
     """
+
+    if isinstance(args, functools.partial):
+        #todo: this kind of recursion we now have to build into every function?
+        args = args()
+
+    if hasattr(args, "expr"):
+        args = args.expr
 
     # If it is already a primary, return it
     if isinstance(args, str) or isinstance(args, int) or isinstance(args, float):
@@ -52,6 +62,8 @@ def cast_lxml_elements(args):
         casted_args.append(arg)
 
     return casted_args
+
+
 def fn_count(args):
 
     if isinstance(args, list):
@@ -180,10 +192,17 @@ functions = {
 # Add the initial set of functions to the registry
 reg.add_functions(functions=functions, overwrite_functions=True)
 
-def get_function(v):
-    qname = v[0]
-    args = list(v[1:])
+query = QuerySingleton()
 
+def get_function(toks):
+    qname = toks[0]
+
+    if not isinstance(qname, QName):
+        # The first token should really be a qname. This is the name of the function.
+        return toks
+
+
+    args = list(toks[1:])
 
     # If no prefix is defined, FN will be assumed for function calls
     if qname.prefix is None:
@@ -200,7 +219,11 @@ def get_function(v):
         if len(args) == 1:
             args = args[0]
 
-        return partial(function, args)
+        if hasattr(function, "query"):
+            # If the function has a query attribute, pass a link towards the XML instance
+            return partial(function, args, query=query)
+        else:
+            return partial(function, args)
     else:
         print("Cannot find function in registry")
 

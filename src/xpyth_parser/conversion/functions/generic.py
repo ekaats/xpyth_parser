@@ -1,7 +1,6 @@
-import functools
-import logging
+
 from typing import Union, Optional
-from ..qname import Parameter, QName
+from ..qname import QName
 
 
 class FunctionRegistry:
@@ -53,6 +52,22 @@ class FunctionRegistry:
                 elif overwrite_functions is True:
                     # Only overwrite functions if this is explicitly set
                     self.functions[function_name] = function
+
+class QuerySingleton:
+    _instance = None
+    lxml_tree = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    def __init__(
+            self,
+            lxml_tree = None
+    ):
+        if lxml_tree is not None:
+            self.lxml_tree = lxml_tree
 
 
 class OrExpr:

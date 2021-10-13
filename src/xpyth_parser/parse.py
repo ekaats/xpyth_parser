@@ -1,8 +1,8 @@
 from lxml import etree
 from lxml.etree import Element
 from typing import Union, Optional
-from .grammar.expressions import t_XPath, resolve_expression, QuerySingleton
-from .conversion.functions.generic import FunctionRegistry
+from .grammar.expressions import t_XPath, resolve_expression
+from .conversion.functions.generic import FunctionRegistry, QuerySingleton
 from .grammar.qualified_names import VariableRegistry
 
 
