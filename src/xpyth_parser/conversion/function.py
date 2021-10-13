@@ -64,8 +64,8 @@ def cast_lxml_elements(args):
     return casted_args
 
 
-def fn_count(args):
-
+def fn_count(*args, **kwargs):
+    args = args[0]
     if isinstance(args, list):
 
         return len(args)
@@ -73,8 +73,8 @@ def fn_count(args):
         return 1
 
 
-def fn_avg(args):
-    casted_args = cast_lxml_elements(args=args)
+def fn_avg(*args, **kwargs):
+    casted_args = cast_lxml_elements(args=args[0])
 
     if isinstance(casted_args, int):
         # If there is only one value, the sum would be the same as the value
@@ -83,24 +83,24 @@ def fn_avg(args):
     return sum(casted_args) / len(casted_args)
 
 
-def fn_max(args):
-    casted_args = cast_lxml_elements(args=args)
+def fn_max(*args, **kwargs):
+    casted_args = cast_lxml_elements(args=args[0])
     if isinstance(casted_args, int):
         # If there is only one value, the sum would be the same as the value
         return casted_args
 
     return max(casted_args)
 
-def fn_min(args):
-    casted_args = cast_lxml_elements(args=args)
+def fn_min(*args, **kwargs):
+    casted_args = cast_lxml_elements(args=args[0])
     if isinstance(casted_args, int):
         # If there is only one value, the sum would be the same as the value
         return casted_args
 
     return min(casted_args)
 
-def fn_sum(args):
-    casted_args = cast_lxml_elements(args=args)
+def fn_sum(*args, **kwargs):
+    casted_args = cast_lxml_elements(args=args[0])
 
     if isinstance(casted_args, int):
         # If there is only one value, the sum would be the same as the value
@@ -109,47 +109,47 @@ def fn_sum(args):
     return sum(casted_args)
 
 
-def fn_not(args):
+def fn_not(*args, **kwargs):
     for arg in args:
         if arg is True:
             return False  # found an argument that is true
     # Did not find a True value
     return True
 
-def fn_empty(args):
+def fn_empty(*args, **kwargs):
     for arg in args:
         if arg is None or arg == "":
             return True
 
     return False
 
-def xs_date(args):
-    casted_args = cast_lxml_elements(args=args)
+def xs_date(*args, **kwargs):
+    casted_args = cast_lxml_elements(args=args[0])
     if len(casted_args) == 0:
         return False
     else:
         date = parse_date(casted_args)
         return date
 
-def xs_yearMonthDuration(args):
-    casted_args = cast_lxml_elements(args=args)
+def xs_yearMonthDuration(*args, **kwargs):
+    casted_args = cast_lxml_elements(args=args[0])
     if len(casted_args) == 0:
         return False
     else:
         duration = parse_duration(casted_args)
         return duration
 
-def xs_dayTimeDuration(args):
-    casted_args = cast_lxml_elements(args=args)
+def xs_dayTimeDuration(*args, **kwargs):
+    casted_args = cast_lxml_elements(args=args[0])
     if len(casted_args) == 0:
         return False
     else:
         duration = parse_duration(casted_args)
         return duration
 
-def xs_qname(args):
+def xs_qname(*args, **kwargs):
     # Returns an xs:QName value formed using a supplied namespace URI and lexical QName.
-
+    args = args[0]
     if isinstance(args, str):
         prefix, localname = str(args).split(":", 1)
         return QName(prefix=prefix, localname=localname)
@@ -162,14 +162,14 @@ def xs_qname(args):
         prefix, localname = str(args[1]).split(":", 1)
         return QName(prefix=prefix, localname=localname, namespace=args[0])
 
-def fn_number(args):
+def fn_number(*args, **kwargs):
     """
     Returns an xs:QName value formed using a supplied namespace URI and lexical QName.
 
     :param args:
     :return:
     """
-    casted_args = cast_lxml_elements(args=args)
+    casted_args = cast_lxml_elements(args=args[0])
 
     # Otherwise try to cast the argument to float.
     return float(casted_args)
@@ -189,6 +189,11 @@ functions = {
         "xs:QName": xs_qname,
 
     }
+
+# Add XBRL functions
+from .functions.xbrl import function_list
+functions.update(function_list)
+
 # Add the initial set of functions to the registry
 reg.add_functions(functions=functions, overwrite_functions=True)
 
@@ -219,11 +224,7 @@ def get_function(toks):
         if len(args) == 1:
             args = args[0]
 
-        if hasattr(function, "query"):
-            # If the function has a query attribute, pass a link towards the XML instance
-            return partial(function, args, query=query)
-        else:
-            return partial(function, args)
+        return partial(function, args, query=query.lxml_tree)
     else:
         print("Cannot find function in registry")
 
