@@ -1,8 +1,8 @@
 from lxml import etree
 from lxml.etree import Element
 from typing import Union, Optional
-from .grammar.expressions import t_XPath, resolve_expression, QuerySingleton
-from .conversion.functions.generic import FunctionRegistry
+from .grammar.expressions import t_XPath, resolve_expression
+from .conversion.functions.generic import FunctionRegistry, QuerySingleton
 from .grammar.qualified_names import VariableRegistry
 
 
@@ -24,7 +24,7 @@ class Parser:
         :param parseAll: Boolean passed to PyParsing. If set to true, Parsing will fail if any part of the string is not understood.
         :param variable_map: Dict of variables which Parameters can be mapped to.
         :param xml: Byte string of an XML object to be parsed
-        :param no_resolve: If set to True, only grammar is parsed but the expression is not resolved.
+        :param no_resolve: If set to True, only grammar is parsed but the expression is not resolved. This can be used for debugging.
 
         For example:
         parsed_expr = Parser("(1 + 2) = (2 + 1)")

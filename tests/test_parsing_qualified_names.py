@@ -3,7 +3,7 @@ import unittest
 from pyparsing import ParseException
 
 from src.xpyth_parser.conversion.qname import QName
-from src.xpyth_parser.grammar.qualified_names import t_QName, t_VarName, t_Wildcard
+from src.xpyth_parser.grammar.expressions import t_QName, t_VarName, t_Wildcard
 
 
 class QualifiedNameTests(unittest.TestCase):

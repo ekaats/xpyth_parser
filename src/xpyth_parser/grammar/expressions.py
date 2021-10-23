@@ -1,5 +1,6 @@
 import functools
 import operator
+import types
 
 import pyparsing
 from pyparsing import (
@@ -11,17 +12,21 @@ from pyparsing import (
     ZeroOrMore,
     Forward,
     Keyword,
-    Suppress,
+    Suppress, Regex,
 )
 
+from .qualified_names import VariableRegistry
+from ..conversion.functions.generic import QuerySingleton
+from ..conversion.tests import processingInstructionTest, anyKindTest, textTest, commentTest, schemaAttributeTest, \
+    elementTest, schemaElementTest, documentTest
 
-from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Literal
+var_reg = VariableRegistry()
 
-from .qualified_names import t_VarName, t_SingleType, t_AtomicType, t_EQName, t_VarRef
-from .tests import t_KindTest, t_NodeTest
+
+from .literals import l_par_l, l_par_r, l_dot, t_NCName, t_IntegerLiteral, t_Literal, t_StringLiteral
 
 from ..conversion.function import get_function, resolve_paths, cast_parameters
-from ..conversion.qname import Parameter
+from ..conversion.qname import Parameter, qname_from_parse_results
 
 xpath_version = "3.1"
 
@@ -35,6 +40,77 @@ https://www.w3.org/TR/xpath20/#id-expressions
 t_ExprSingle = (
     Forward()
 )  # Declare an empty token, as it is used in a recursive declaration later on
+
+"""
+4. Qualified Names
+https://www.w3.org/TR/REC-xml-names/#ns-qualnames
+
+"""
+
+t_Prefix = t_NCName
+t_Prefix.setName("Prefix")
+
+t_LocalPart = t_NCName
+t_LocalPart.setName("LocalPart")
+
+t_PrefixedName = t_Prefix + Suppress(Literal(":")) + t_LocalPart
+t_PrefixedName.setName("PrefixedName")
+
+t_UnprefixedName = t_LocalPart
+t_UnprefixedName.setName("UnprefixedName")
+
+t_QName = t_PrefixedName | t_UnprefixedName
+t_QName.setName("Qname")
+t_QName.setParseAction(qname_from_parse_results)
+
+# All these elements refer to QName
+t_VarName = t_AtomicType = t_ElementName = t_TypeName = t_AttributeName = t_QName
+t_VarName.setName("Varname")
+
+def get_variable(toks):
+
+    var_name = toks[0]
+
+    if len(toks) > 1:
+        return Parameter(qname=toks[0], type_declaration=toks[1])
+    else:
+
+        for var in var_reg.get_variable(toks[0]):
+        # return Parameter(qname=v[0])
+            if isinstance(var, str):
+
+                parsed_var = t_XPath.parseString(var, parseAll=True)
+                parsed_var = parsed_var[0].expr
+
+
+                # try:
+                #     # Parse the individual value as if it is an XPath expression
+                #     parsed_var = t_XPath.parseString(var, parseAll=True)
+                #
+                #     # Unpack the outcome
+                #     parsed_var = parsed_var[0].expr
+                #
+                # except:
+                #     logging.warning(f"Could not parse parameter '{var_name}', value '{var}'")
+                #     parsed_var = var
+
+                yield parsed_var
+
+            elif isinstance(var, int) or isinstance(var, float):
+                yield var
+
+            else:
+                print("Really expected a string as variable")
+
+t_VarRef = Suppress(Literal("$")) + t_VarName
+t_VarRef.setParseAction(get_variable)
+t_VarRef.setName("VarRef")
+
+t_AtomicType.setName("AtomicType")
+t_ElementName.setName("ElementName")
+t_TypeName.setName("TypeName")
+t_AttributeName.setName("AttributeName")
+
 
 
 t_ExprSingle.setName("ExprSingle")
@@ -185,7 +261,21 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
 
     if isinstance(rootexpr, functools.partial):
         # Main node is a Function. Resolve this and add the answer to the Syntax Tree.
-        return rootexpr()
+        # return rootexpr()
+        function_outcome = rootexpr()
+        if isinstance(function_outcome, types.GeneratorType):
+            answers = []
+            for ans in function_outcome:
+                # todo: try to figure out if Functions should be yielding (generator) or returning.
+                #  I'd say yield, because "fn:number(1 to 100)[. mod 5 eq 0]" should be a legal expression
+                #  where 1 to 100 is cast as a number, and 'fed' through the predidicate filtering.
+                answers.append(ans)
+            return answers
+
+
+        else:
+            return function_outcome
+
         # return resolve_fn(rootexpr)
 
     elif isinstance(rootexpr, Parameter):
@@ -252,6 +342,108 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
     # Give back the now resolved expression
     return rootexpr
 
+"""
+TESTS
+https://www.w3.org/TR/xpath20/#prod-xpath-KindTest
+"""
+
+t_ElementNameOrWildcard = t_ElementName | Literal("*")
+t_ElementNameOrWildcard.setName("ElementNameOrWildcard")
+
+t_ElementTest = (
+    Keyword("element")
+    + l_par_l
+    + Optional(t_ElementNameOrWildcard + Optional("," + t_TypeName + Optional("?")))
+    + l_par_r
+)
+t_ElementTest.setName("ElementTest")
+t_ElementTest.setParseAction(elementTest)
+
+t_ElementDeclaration = t_ElementName
+t_ElementDeclaration.setName("ElementDeclaration")
+
+t_SchemaElementTest = (
+    Keyword("schema-element") + l_par_l + t_ElementDeclaration + l_par_r
+)
+t_SchemaElementTest.setParseAction(schemaElementTest)
+t_SchemaElementTest.setName("schema-element")
+
+t_DocumentTest = (
+    Keyword("document-node")
+    + l_par_l
+    + Optional(t_ElementTest | t_SchemaElementTest)
+    + l_par_r
+)
+t_DocumentTest.setName("DocumentTest")
+t_DocumentTest.setParseAction(documentTest)
+
+t_AttribNameOrWildcard = t_AttributeName | "*"
+t_AttribNameOrWildcard.setName("AttribNameOrWildcard")
+
+t_AttributeTest = (
+    Keyword("attribute")
+    + l_par_l
+    + Optional(t_AttribNameOrWildcard + Optional("," + t_TypeName))
+    + l_par_r
+)
+t_AttributeTest.setName("AttributeTest")
+
+t_AttributeDeclaration = t_AttributeName
+t_AttributeDeclaration.setName("AttributeDeclaration")
+
+t_SchemaAttributeTest = (
+    Keyword("schema-attribute") + l_par_l + t_AttributeDeclaration + l_par_r
+)
+t_SchemaAttributeTest.setParseAction(schemaAttributeTest)
+t_SchemaAttributeTest.setName("SchemaAttributeTest")
+
+t_CommentTest = Keyword("comment") + l_par_l + l_par_r
+t_CommentTest.setParseAction(commentTest)
+t_CommentTest.setName("comment")
+
+t_TextTest = Keyword("text") + l_par_l + l_par_r
+t_TextTest.setParseAction(textTest)
+t_TextTest.setName("TextTest")
+
+t_AnyKindTest = Keyword("node") + l_par_l + l_par_r
+t_AnyKindTest.setParseAction(anyKindTest)
+t_AnyKindTest.setName("AnyKindTest")
+
+t_PITest = (
+    Keyword("processing-instruction")
+    + l_par_l
+    + Optional(t_NCName | t_StringLiteral)
+    + l_par_r
+)
+t_PITest.setParseAction(processingInstructionTest)
+t_PITest.setName("Processing-InstructionTest")
+
+t_KindTest = (
+    t_ElementTest
+    | t_AttributeTest
+    | t_SchemaElementTest
+    | t_SchemaAttributeTest
+    | t_PITest
+    | t_CommentTest
+    | t_TextTest
+    | t_AnyKindTest
+    | t_DocumentTest
+)
+t_KindTest.setName("KindTest")
+# Just as with t_NumericLiteral, the t_Wildcard order needed to be modified slightly
+t_Wildcard = (
+    (t_NCName + Literal(":") + Literal("*"))
+    | (Literal("*") + Literal(":") + t_NCName)
+    | Literal("*")
+)
+t_Wildcard.setName("Wildcard")
+
+t_NameTest = t_QName | t_Wildcard
+t_NameTest.setName("NameTest")
+
+t_NodeTest = t_KindTest | t_NameTest
+t_NodeTest.setName("NodeTest")
+
 
 class XPath:
     def __init__(self, expr, variable_map=None, xml_etree=None):
@@ -281,7 +473,6 @@ def parse_expr(toks):
 # t_Expr.setParseAction(lambda x: XPath(expr=x[0]))
 t_Expr.setParseAction(parse_expr)
 
-# https://www.w3.org/TR/xpath20/#doc-xpath-ParenthesizedExpr
 
 
 # https://www.w3.org/TR/xpath20/#doc-xpath-ContextItemExpr
@@ -336,21 +527,6 @@ t_ReverseStep.setName("ReverseStep")
 t_Predicate = Suppress("[") + t_Expr + Suppress("]")
 t_Predicate.setName("Predicate")
 
-class QuerySingleton:
-    _instance = None
-    lxml_tree = None
-
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def __init__(
-            self,
-            lxml_tree = None
-    ):
-        if lxml_tree is not None:
-            self.lxml_tree = lxml_tree
 
 class Predicate:
     def __init__(self, val):
@@ -395,6 +571,17 @@ t_ArgumentList = (
     + l_par_r
 )
 t_ArgumentList.setName("ArgumentList")
+
+t_BracedURILiteral = (
+    Literal("Q") + Literal("{") + ZeroOrMore(Regex("[^{}]")) + Literal("}")
+)
+t_BracedURILiteral.setName("BracedURILiteral")
+
+t_URIQualifiedName = t_BracedURILiteral + t_NCName
+t_URIQualifiedName.setName("URIQualifiedName")
+
+t_EQName = t_QName | t_URIQualifiedName
+t_EQName.setName("EQName")
 
 tx_FunctionName = t_EQName
 
@@ -540,6 +727,8 @@ def get_path_expr(toks):
     :param toks:
     :return:
     """
+    # todo: Can be ["//", QNAME, Predicate], but also [list of houndreds of paths from a variable]
+
     steps = []
     if toks[0] == "/" and len(toks) == 1:
         # https://www.w3.org/TR/xpath-3/#parse-note-leading-lone-slash
@@ -581,11 +770,12 @@ def get_path_expr(toks):
     # todo: Path expression also needs to be handled while parsing if we want partial functions to work.
     #  this probably means that we should let the whole 'parse first, intepret later' part go :/
 
-    query_singlton = QuerySingleton()
+    query_singleton = QuerySingleton()
     query = path_expression.to_str()
 
-    result = query_singlton.lxml_tree.xpath(query)
-
+    result = query_singleton.lxml_tree.xpath(query, namespaces=query_singleton.lxml_tree.nsmap)
+    if len(result) < 1:
+        return [None]
     return result
 
 
@@ -708,6 +898,10 @@ t_UnaryExpr.setName("UnaryExpr")
 t_UnaryExpr.setParseAction(get_unary_expr)
 
 
+
+t_SingleType = t_AtomicType + Optional("?")
+t_SingleType.setName("SingleType")
+
 if xpath_version == "2.0":
     t_CastExpr = t_UnaryExpr + Optional(Keyword("cast") + Keyword("as") + t_SingleType)
 elif xpath_version == "3.1":
@@ -715,6 +909,8 @@ elif xpath_version == "3.1":
     t_ArrowFunctionSpecifier = t_EQName | t_VarRef | t_ParenthesizedExpr
     t_ArrowExpr = t_UnaryExpr + ZeroOrMore(Literal("=>") + t_ArrowFunctionSpecifier)
     t_CastExpr = t_ArrowExpr + Optional(Keyword("cast") + Keyword("as") + t_SingleType)
+
+
 
 
 t_CastableExpr = t_CastExpr + Optional(
@@ -1341,6 +1537,7 @@ t_ExprSingle <<= t_IfExpr ^ t_ForExpr ^ t_OrExpr ^ t_QuantifiedExpr ^ t_LetExpr
 
 t_XPath = t_Expr
 t_XPath.setName("XPath")
+
 
 
 # todo: Generating a railroad map requires Pyparsing 3.0. Uncomment when PP3.0 is released from beta
