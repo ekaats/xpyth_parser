@@ -1,6 +1,6 @@
 import functools
-import logging
 import operator
+import types
 
 import pyparsing
 from pyparsing import (
@@ -261,7 +261,21 @@ def resolve_expression(expression, variable_map, lxml_etree, context_item_value=
 
     if isinstance(rootexpr, functools.partial):
         # Main node is a Function. Resolve this and add the answer to the Syntax Tree.
-        return rootexpr()
+        # return rootexpr()
+        function_outcome = rootexpr()
+        if isinstance(function_outcome, types.GeneratorType):
+            answers = []
+            for ans in function_outcome:
+                # todo: try to figure out if Functions should be yielding (generator) or returning.
+                #  I'd say yield, because "fn:number(1 to 100)[. mod 5 eq 0]" should be a legal expression
+                #  where 1 to 100 is cast as a number, and 'fed' through the predidicate filtering.
+                answers.append(ans)
+            return answers
+
+
+        else:
+            return function_outcome
+
         # return resolve_fn(rootexpr)
 
     elif isinstance(rootexpr, Parameter):
