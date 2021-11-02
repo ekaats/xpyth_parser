@@ -196,6 +196,7 @@ class ExpressionTests(unittest.TestCase):
             Parser("if(1 = 2) then a else b").resolved_answer, QName(localname="b")
         )
 
+
         # With path expressions, returning qnames
         TESTDATA_FILENAME = os.path.join(
             os.path.dirname(__file__), "input/instance.xml"
@@ -211,13 +212,6 @@ class ExpressionTests(unittest.TestCase):
                 QName(prefix="test_prefix", localname="localn")
             )
 
-            # If no file is given, it should return the 'else' Expr and not fail otherwise
-            self.assertEqual(
-                Parser(
-                    "if(count(//singleOccuringElement) eq 1) then xs:QName(\'test_prefix:localn\') else xs:QName(\'test_prefix:otherloc\')").resolved_answer,
-                QName(prefix="test_prefix", localname="localn")
-            )
-
             # With multiple elements found
             self.assertEqual(
                 Parser(
@@ -225,6 +219,7 @@ class ExpressionTests(unittest.TestCase):
                     ,xml=xml_bytes).resolved_answer,
                 QName(prefix="test_prefix", localname="localn")
             )
+
 
             # With multiple nested if statements
             self.assertEqual(
@@ -247,6 +242,24 @@ class ExpressionTests(unittest.TestCase):
                 QName(prefix="test_prefix", localname="otherloc")
             )
 
+    def test_if_expression_without_xml_file(self):
+        """
+        These tests are all done without loading and XML file.
+        Therefore, no elements should be found and count(//elem) should be 0
+
+        """
+        self.assertEqual(
+            Parser(
+                "if(count(//singleOccuringElement) eq 1) then xs:QName(\'test_prefix:localn\') else xs:QName(\'test_prefix:otherloc\')").resolved_answer,
+            QName(prefix="test_prefix", localname="localn")
+        )
+
+
+        self.assertEqual(
+            Parser(
+                "if(count(//multipleDoubleOccuringElement) eq 4) then xs:QName(\'test_prefix:localn\') else xs:QName(\'test_prefix:otherloc\')").resolved_answer,
+            QName(prefix="test_prefix", localname="otherloc")
+        )
 
     def test_range_expression(self):
         self.assertEqual(Parser("1 to 100").resolved_answer, range(1, 100))
