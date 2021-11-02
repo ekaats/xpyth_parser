@@ -772,10 +772,15 @@ def get_path_expr(toks):
 
     query_singleton = QuerySingleton()
     query = path_expression.to_str()
+    if query_singleton.lxml_tree is not None:
+        # Only try to query the lxml xpath if this actually exist
+        result = query_singleton.lxml_tree.xpath(query, namespaces=query_singleton.lxml_tree.nsmap)
+    else:
+        return [None]
 
-    result = query_singleton.lxml_tree.xpath(query, namespaces=query_singleton.lxml_tree.nsmap)
     if len(result) < 1:
         return [None]
+
     return result
 
 
